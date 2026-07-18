@@ -64,8 +64,10 @@ jobs:
           publish-changes: true
           # Async import polls the server-side job instead of holding one HTTP call
           # open — the template's synchronous imports hit the client's fixed
-          # 30-minute timeout. Generous ceiling, same pattern as VelopsTemplate.
-          use-async: true
+          # 30-minute timeout. Generous ceiling. (The template repo says
+          # `use-async`, but the action's real input name is `run-asynchronously`
+          # — the v1 action warned "Unexpected input(s) 'use-async'" on run #1.)
+          run-asynchronously: true
           max-async-wait-time: 90
 
       # The scripts below are zero-dependency Node 20 ESM (native fetch) — no npm ci.
