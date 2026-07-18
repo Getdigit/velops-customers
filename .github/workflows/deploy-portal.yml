@@ -1,0 +1,68 @@
+name: Deploy Portal
+
+# Builds the portal SPA (Vite) and uploads it to Power Pages as a CODE SITE with
+# `pac pages upload-code-site`. NOTE: the FIRST upload CREATES the site in an
+# INACTIVE state — activate it once via the Power Pages home -> Inactive sites ->
+# "VelOps Support" -> Activate (RUNBOOK stap ④). Later uploads update the active
+# site in place; no re-activation needed.
+run-name: Deploy portal (first upload creates an INACTIVE site — activate once, RUNBOOK ④)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+    env:
+      # vars.DATAVERSE_URL: repo VARIABLE — environment URL of "VelOps Customer" (RUNBOOK stap ①).
+      DATAVERSE_URL: ${{ vars.DATAVERSE_URL }}
+      # secrets.POWERPLATFORM_CLIENT_ID: repo SECRET — client id of the SPN app registration (RUNBOOK stap ②/③).
+      POWERPLATFORM_CLIENT_ID: ${{ secrets.POWERPLATFORM_CLIENT_ID }}
+      # secrets.POWERPLATFORM_CLIENT_SECRET: repo SECRET — client secret of that SPN (RUNBOOK stap ③).
+      POWERPLATFORM_CLIENT_SECRET: ${{ secrets.POWERPLATFORM_CLIENT_SECRET }}
+      # secrets.POWERPLATFORM_TENANT_ID: repo SECRET — Entra tenant id (RUNBOOK stap ③).
+      POWERPLATFORM_TENANT_ID: ${{ secrets.POWERPLATFORM_TENANT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: portal/package-lock.json
+
+      # Both VITE_ values may be EMPTY before the Function App exists (RUNBOOK stap ⑤):
+      # the build still succeeds and the AI assistant reports itself as not configured.
+      # After stap ⑤ sets the var + secret, re-run this workflow once so the bundle
+      # picks them up (Vite inlines env vars at build time).
+      - name: Build portal SPA
+        env:
+          # vars.AI_PROXY_URL: repo VARIABLE — https://velops-customer-ai.azurewebsites.net/api/messages (RUNBOOK stap ⑤).
+          VITE_AI_PROXY_URL: ${{ vars.AI_PROXY_URL }}
+          # secrets.AI_PROXY_FUNCTION_KEY: repo SECRET — DEDICATED revocable function key; it ends up
+          # in the public bundle, so treat it as rotatable spend-control, not a secret (docs/SECURITY.md).
+          VITE_AI_PROXY_KEY: ${{ secrets.AI_PROXY_FUNCTION_KEY }}
+        run: |
+          cd portal
+          npm ci
+          npm run build
+
+      # Installs the pac CLI onto the runner's PATH for the raw pac steps below.
+      - uses: microsoft/powerplatform-actions/actions-install@v1
+
+      # Flags verified against Microsoft Learn (pac auth reference): SPN profile via
+      # --applicationId / --clientSecret / --tenant, targeted at --environment (URL works).
+      - name: Authenticate pac as the service principal
+        shell: pwsh
+        run: |
+          pac auth create --applicationId $env:POWERPLATFORM_CLIENT_ID --clientSecret $env:POWERPLATFORM_CLIENT_SECRET --tenant $env:POWERPLATFORM_TENANT_ID --environment $env:DATAVERSE_URL
+
+      # Flags verified against Microsoft Learn (create-code-sites): --rootPath points at the
+      # site folder; portal/powerpages.config.json supplies compiledPath (./dist) and the
+      # default landing page; --siteName pins the site match explicitly (CLI args win over
+      # the config file). First run creates the site under "Inactive sites" (RUNBOOK ④).
+      - name: Upload code site
+        shell: pwsh
+        run: |
+          pac pages upload-code-site --rootPath portal --siteName "VelOps Support"

@@ -1,0 +1,95 @@
+name: Deploy Solution
+
+# Packs the hand-authored unpacked solution (solution/VelopsCustomers), imports it
+# into the "VelOps Customer" Dataverse environment with the SPN, then runs the
+# post-import scripts and read-back verification (scripts/verify.mjs prints one
+# JSON report per scope; a red verify fails the run). All Dataverse work happens
+# here in CI — build containers have no pac CLI or credentials.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target-environment:
+        description: 'Environment URL override (leave empty to use repo variable DATAVERSE_URL)'
+        required: false
+        type: string
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+    env:
+      # vars.DATAVERSE_URL: repo VARIABLE — environment URL of "VelOps Customer" (RUNBOOK stap ①).
+      # The optional workflow input overrides it for a one-off run against another environment.
+      DATAVERSE_URL: ${{ inputs.target-environment || vars.DATAVERSE_URL }}
+      # secrets.POWERPLATFORM_CLIENT_ID: repo SECRET — client id of the SPN app registration (RUNBOOK stap ②/③).
+      POWERPLATFORM_CLIENT_ID: ${{ secrets.POWERPLATFORM_CLIENT_ID }}
+      # secrets.POWERPLATFORM_CLIENT_SECRET: repo SECRET — client secret of that SPN (RUNBOOK stap ③).
+      POWERPLATFORM_CLIENT_SECRET: ${{ secrets.POWERPLATFORM_CLIENT_SECRET }}
+      # secrets.POWERPLATFORM_TENANT_ID: repo SECRET — Entra tenant id (RUNBOOK stap ③).
+      POWERPLATFORM_TENANT_ID: ${{ secrets.POWERPLATFORM_TENANT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: formscripts/package-lock.json
+
+      # esbuild compiles formscripts/src/*.ts into solution/VelopsCustomers/WebResources/
+      # (extensionless IIFE files, e.g. gd_ticket_form) BEFORE the solution is packed.
+      - name: Build TypeScript form scripts
+        run: |
+          cd formscripts
+          npm ci
+          node build.mjs
+
+      - uses: microsoft/powerplatform-actions/actions-install@v1
+
+      - uses: microsoft/powerplatform-actions/pack-solution@v1
+        with:
+          solution-folder: solution/VelopsCustomers
+          solution-file: VelopsCustomers_packed.zip
+          solution-type: Unmanaged
+
+      - uses: microsoft/powerplatform-actions/import-solution@v1
+        with:
+          environment-url: ${{ env.DATAVERSE_URL }}
+          app-id: ${{ env.POWERPLATFORM_CLIENT_ID }}
+          client-secret: ${{ env.POWERPLATFORM_CLIENT_SECRET }}
+          tenant-id: ${{ env.POWERPLATFORM_TENANT_ID }}
+          solution-file: VelopsCustomers_packed.zip
+          force-overwrite: true
+          publish-changes: true
+          # Async import polls the server-side job instead of holding one HTTP call
+          # open — the template's synchronous imports hit the client's fixed
+          # 30-minute timeout. Generous ceiling, same pattern as VelopsTemplate.
+          use-async: true
+          max-async-wait-time: 90
+
+      # The scripts below are zero-dependency Node 20 ESM (native fetch) — no npm ci.
+      # They read DATAVERSE_URL + the three POWERPLATFORM_* values from the job env above.
+
+      # Belt-and-braces (spec D2): hand-authored XML cannot reliably carry
+      # AutoNumberFormat through import, so set VEL-{SEQNUM:5} + seed 1001 via the
+      # metadata API. Idempotent; never re-seeds a live sequence.
+      - name: Ensure ticket autonumber
+        run: node scripts/ensure-autonumber.mjs
+
+      # Upsert-by-name seed of the 10 gd_app product areas (Rider App ... Other).
+      - name: Seed VelOps apps
+        run: node scripts/seed-apps.mjs
+
+      - name: Verify schema
+        run: node scripts/verify.mjs
+        env:
+          VERIFY_SCOPE: schema
+
+      # SMOKE=1 also creates + deletes one smoke ticket and asserts its number
+      # matches VEL-##### (proves the autonumber end-to-end, spec fase 2).
+      - name: Verify data (incl. smoke ticket)
+        run: node scripts/verify.mjs
+        env:
+          VERIFY_SCOPE: data
+          SMOKE: "1"

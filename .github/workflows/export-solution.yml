@@ -1,0 +1,81 @@
+name: Export Solution
+
+# Drift check: exports the live VelopsCustomers solution from the "VelOps Customer"
+# environment, unpacks it OVER solution/VelopsCustomers and prints the git diff as
+# a drift report. Nothing is pushed (the default GITHUB_TOKEN is read-only here,
+# same as in VelopsTemplate) — the fresh unpack is published as a build artifact;
+# a follow-up commit is made from an environment that consumes it.
+#
+# CAVEAT: the local solution is hand-authored, so the FIRST export will show large
+# formatting-only diffs (element order, whitespace, attribute defaults the packer
+# normalizes). Read the drift report for CONTENT changes, not layout.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  export:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: microsoft/powerplatform-actions/actions-install@v1
+
+      # Fails fast with a clear auth error before the (slower) export starts.
+      - uses: microsoft/powerplatform-actions/who-am-i@v1
+        with:
+          # vars.DATAVERSE_URL: repo VARIABLE — environment URL of "VelOps Customer" (RUNBOOK stap ①).
+          environment-url: ${{ vars.DATAVERSE_URL }}
+          # secrets.POWERPLATFORM_CLIENT_ID: repo SECRET — client id of the SPN app registration (RUNBOOK stap ②/③).
+          app-id: ${{ secrets.POWERPLATFORM_CLIENT_ID }}
+          # secrets.POWERPLATFORM_CLIENT_SECRET: repo SECRET — client secret of that SPN (RUNBOOK stap ③).
+          client-secret: ${{ secrets.POWERPLATFORM_CLIENT_SECRET }}
+          # secrets.POWERPLATFORM_TENANT_ID: repo SECRET — Entra tenant id (RUNBOOK stap ③).
+          tenant-id: ${{ secrets.POWERPLATFORM_TENANT_ID }}
+
+      - uses: microsoft/powerplatform-actions/export-solution@v1
+        with:
+          environment-url: ${{ vars.DATAVERSE_URL }}
+          app-id: ${{ secrets.POWERPLATFORM_CLIENT_ID }}
+          client-secret: ${{ secrets.POWERPLATFORM_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.POWERPLATFORM_TENANT_ID }}
+          solution-name: VelopsCustomers
+          solution-output-file: VelopsCustomers_export.zip
+
+      - uses: microsoft/powerplatform-actions/unpack-solution@v1
+        with:
+          solution-file: VelopsCustomers_export.zip
+          solution-folder: solution/VelopsCustomers
+          solution-type: Unmanaged
+          overwrite-files: true
+
+      # Read-only probe of the live state, printed in the log (template pattern).
+      - name: Print live solution version
+        shell: pwsh
+        run: |
+          Select-String -Path solution/VelopsCustomers/Other/Solution.xml -Pattern '<Version>' | Select-Object -First 1
+
+      # The drift report: what the live environment has that the repo does not
+      # (and vice versa). --intent-to-add makes brand-new files from the export
+      # show up in git diff too.
+      - name: Drift report (live environment vs repo)
+        shell: pwsh
+        run: |
+          git add --intent-to-add solution/VelopsCustomers
+          Write-Host '=== drift: changed/new files ==='
+          git status --porcelain -- solution/VelopsCustomers
+          Write-Host '=== drift: diffstat ==='
+          git --no-pager diff --stat -- solution/VelopsCustomers
+          Write-Host '=== drift: full diff ==='
+          git --no-pager diff -- solution/VelopsCustomers
+
+      # The default GITHUB_TOKEN is read-only, so a direct push would fail
+      # (verified in VelopsTemplate: "Write access to repository not granted").
+      # Publish the fresh unpack as an artifact; commit it from a dev environment.
+      - name: Upload exported solution artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: velopscustomers-export
+          path: solution/VelopsCustomers/
+          retention-days: 3
+          include-hidden-files: true

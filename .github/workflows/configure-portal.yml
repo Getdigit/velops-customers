@@ -1,0 +1,41 @@
+name: Configure Portal
+
+# Idempotently configures the ACTIVATED Power Pages site through plain Dataverse
+# Web API calls (enhanced data model = mspp_* rows): 7 table permissions linked to
+# the built-in "Authenticated Users" web role + the site settings (Web API
+# enablement, open registration). Fails loud if the site was never activated
+# (RUNBOOK stap ④ comes first). Then verify.mjs asserts the portal config,
+# INCLUDING the negative asserts: zero permissions / Webapi settings for
+# gd_internalnote and annotation (spec D1).
+
+on:
+  workflow_dispatch:
+
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    env:
+      # vars.DATAVERSE_URL: repo VARIABLE — environment URL of "VelOps Customer" (RUNBOOK stap ①).
+      DATAVERSE_URL: ${{ vars.DATAVERSE_URL }}
+      # secrets.POWERPLATFORM_CLIENT_ID: repo SECRET — client id of the SPN app registration (RUNBOOK stap ②/③).
+      POWERPLATFORM_CLIENT_ID: ${{ secrets.POWERPLATFORM_CLIENT_ID }}
+      # secrets.POWERPLATFORM_CLIENT_SECRET: repo SECRET — client secret of that SPN (RUNBOOK stap ③).
+      POWERPLATFORM_CLIENT_SECRET: ${{ secrets.POWERPLATFORM_CLIENT_SECRET }}
+      # secrets.POWERPLATFORM_TENANT_ID: repo SECRET — Entra tenant id (RUNBOOK stap ③).
+      POWERPLATFORM_TENANT_ID: ${{ secrets.POWERPLATFORM_TENANT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Zero-dependency Node scripts (native fetch) — no npm ci needed.
+      - name: Configure table permissions + site settings
+        run: node scripts/configure-portal.mjs
+
+      - name: Verify portal config (incl. D1 negative asserts)
+        run: node scripts/verify.mjs
+        env:
+          VERIFY_SCOPE: portal

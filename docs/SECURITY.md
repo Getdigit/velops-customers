@@ -1,0 +1,84 @@
+# SECURITY — model, AI-key-realiteit en wat verify.mjs afdwingt
+
+## Security-model van het portaal
+
+Toegang komt volledig uit **Power Pages table permissions** op de built-in web role
+**Authenticated Users** — geen per-user toewijzing. Het platform dwingt de scoping
+server-side af; de SPA is puur presentatie.
+
+| Permission | Tabel | Scope | Rechten |
+|---|---|---|---|
+| Ticket - account scope | `gd_supportticket` | Account (via `gd_supportticket_Account_account`) | R/W/C/Append/AppendTo |
+| Message - parent via ticket | `gd_supportmessage` | Parent (via ticket) | R/C/Append/AppendTo |
+| Attachment - parent via ticket | `gd_ticketattachment` | Parent (via ticket) | R/**W**/C/Append/AppendTo — Write is nodig voor de file-PUT op `gd_file` |
+| Team apps - account scope | `gd_accountapp` | Account | R |
+| Apps - global | `gd_app` | Global | R |
+| Contact - self | `contact` | Self | R/W |
+| Account - own team | `account` | Account | R |
+
+Kernpunten:
+
+- **Account-scoping is het anker.** Teamleden zien en bewerken elkaars tickets (bewuste
+  keuze); een ander team ziet nul rijen. Een **ongelinkt contact** (parentcustomerid leeg)
+  matcht geen enkele scope → ziet nul rijen → de SPA toont de pending-gate. De koppeling
+  (registratie → view "Unlinked portal signups" → account zetten) is daarmee ook de
+  autorisatie-handeling.
+- **D1 — interne notities zijn hard onzichtbaar.** Table permissions kunnen niet op
+  kolomwaarde filteren, dus interne notities staan in een aparte tabel `gd_internalnote`
+  die NOOIT een table permission of `Webapi/*`-site setting krijgt; interne bijlagen zijn
+  annotations op die tabel (ook nooit geëxposed). `configure-portal.mjs` heeft een guard
+  die weigert te draaien als iemand ze ooit aan de config toevoegt; `verify.mjs` assert
+  het negatief tegen de live omgeving (zie onder).
+- **Nergens Delete.** Geen enkele permission geeft Delete (`mspp_delete` staat overal
+  expliciet op false); portaalgebruikers kunnen niets verwijderen, ook hun eigen rijen niet.
+- **Bekende v1-noot — direction-spoof.** De klant kan via de Web API zelf een
+  `gd_supportmessage` met `gd_direction = VelOps` aanmaken. Impact: cosmetisch en alleen
+  binnen het eigen team (de account-scope blijft gelden). Fix staat op de backlog: een
+  synchrone plugin die `gd_direction` op create afdwingt op basis van de caller.
+- Mutaties vanuit de SPA dragen het CSRF-token (`__RequestVerificationToken` via
+  `shell.getTokenDeferred()`); reads/writes lopen als de ingelogde portalgebruiker,
+  nooit met een service-account.
+
+## AI-key-realiteit (assistent / ai-proxy)
+
+De SPA roept de Function App `velops-customer-ai` rechtstreeks aan met een **function key
+die in de publieke JS-bundle zit**. Elke ingelogde portalgebruiker kan die key dus uitlezen.
+Consequenties en mitigaties (bewuste v1-afweging):
+
+- **Aparte, roteerbare key.** De portal gebruikt een eigen function key (niet de default),
+  los van de interne hub-proxy. Lekt of misbruikt → key intrekken, nieuwe zetten in
+  repo-secret `AI_PROXY_FUNCTION_KEY`, deploy-portal opnieuw draaien. Rotatie-commando's:
+  [ai-proxy/README.md](../ai-proxy/README.md).
+- **Schade-plafond.** Model staat op **Sonnet** (geen Opus), `max_tokens` gecapt (8000),
+  tool-loop max 6 iteraties, ~30 beurten per sessie. De key geeft alleen toegang tot
+  Claude-verkeer op onze rekening — nooit tot Dataverse (alle data-acties lopen client-side
+  als de gebruiker zelf, zie boven).
+- **Rate-/spend-alerting.** Zet een budget-alert op de Anthropic-key en een Azure-alert op
+  het request-volume van de Function App; de key is een kostenrisico, geen datarisico.
+- **Alleen voor gelinkte gebruikers.** De SPA toont de assistent pas voorbij de
+  pending-gate; de landing/publieke routes bevatten geen AI-calls.
+- **Hardening-pad (fast-follow):** App Service Authentication (Easy Auth, Entra) vóór de
+  Function + `authLevel: 'anonymous'`, zodat er geen key meer in de bundle zit; of een
+  lichte sessie-check in de Function. Gedocumenteerd in ai-proxy/README.md.
+- De **Anthropic-key zelf** staat uitsluitend in de Function App Settings (of Key Vault),
+  nooit in de repo of de bundle.
+
+## Wat verify.mjs afdwingt (in CI, elke deploy)
+
+`scripts/verify.mjs` leest de live omgeving terug en print één JSON-rapport
+(`{ pass, failures, summary }`); één failure = rode CI-run. Scopes:
+
+- **schema** (na deploy-solution): de 6 `gd_`-tabellen bestaan; alle 7 statuscodes van
+  `gd_supportticket` (incl. de 12269xxxx-waarden en Closed onder statecode 1); autonumber
+  `VEL-{SEQNUM:5}`; file-kolom `gd_file` met MaxSizeInKB 32768; `gd_internalnote.HasNotes`;
+  de 4 global option sets met exacte labels én de check dat **alle** waarden in het
+  12269xxxx-blok zitten; role "VelOps Support"; app module `gd_VelopsSupportHub`.
+- **data** (na deploy-solution): ≥ 10 `gd_app`-rijen; met `SMOKE=1` ook een echte
+  create+delete van een smoke-ticket met assert op `^VEL-\d{5}$`.
+- **portal** (na configure-portal): mspp_website bestaat (site geactiveerd); alle 7 table
+  permissions bestaan én zijn gelinkt aan Authenticated Users; alle site settings staan er.
+  Plus de **negatieve asserts** (D1): **nul** table permissions en **nul** `Webapi/*`-site
+  settings voor `gd_internalnote` of `annotation` — komt er ooit één bij, dan faalt de CI.
+
+Losse noot: site setting `Webapi/error/innererror` staat tijdens de bouwfase op `true`
+(diagnostiek) en gaat in de hardening-fase naar `false`.
