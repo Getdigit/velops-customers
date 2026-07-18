@@ -1,0 +1,88 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<forms xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <systemform>
+    <formid>{b5ea0c2b-8a5c-40fe-92c4-fac2bb2fc961}</formid>
+    <IntroducedVersion>1.0.0.0</IntroducedVersion>
+    <FormPresentation>1</FormPresentation>
+    <FormActivationState>1</FormActivationState>
+    <form>
+      <tabs>
+        <tab id="{89bd9e47-0b0f-4b48-8ef3-296e7d894489}" name="tab_1" showlabel="false" labelid="{a35ef17c-00b9-4600-b6d0-6f48347a2a4a}">
+          <labels>
+            <label description="New Tab" languagecode="1033" />
+          </labels>
+          <columns>
+            <column width="34%">
+              <sections>
+                <section id="{a46126b3-0166-457d-b158-66dda2a6a86d}" name="tab_1_column_1_section_1" columns="1" showlabel="false" showbar="false" IsUserDefined="0" labelwidth="130" labelid="{96143128-e133-4ea7-98a5-0ff8bd6aeefa}">
+                  <labels>
+                    <label description="GENERAL" languagecode="1033" />
+                  </labels>
+                  <rows>
+                    <row>
+                      <cell id="{735c365e-3f92-4785-8ae5-7c7a54914bda}">
+                        <labels>
+                          <label description="Ticket" languagecode="1033" />
+                        </labels>
+                        <control id="gd_ticket" classid="{270BD3DB-D9AF-4782-9025-509E298DEC0A}" datafieldname="gd_ticket" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{d920563d-ff6a-425c-b6db-2a08949ab8a9}" rowspan="8" auto="false">
+                        <labels>
+                          <label description="Note" languagecode="1033" />
+                        </labels>
+                        <control id="gd_body" classid="{E0DECE4B-6FC8-4a8f-A065-082708572369}" datafieldname="gd_body" />
+                      </cell>
+                    </row>
+                  </rows>
+                </section>
+              </sections>
+            </column>
+            <column width="33%">
+              <sections>
+                <section id="{47c82ecd-6e80-4d4f-bf03-1bf00568c67b}" name="tab_1_column_2_section_1" columns="1" showlabel="false" showbar="false" IsUserDefined="0" labelwidth="130" labelid="{2a279ae7-9da2-42d7-9e03-4e97983a9408}" visible="false">
+                  <labels>
+                    <label description="New Section" languagecode="1033" />
+                  </labels>
+                  <rows>
+                    <row>
+                      <cell id="{ef7888de-9aa6-44c6-8068-3a1bda0dc576}" labelid="{fe1a6aa2-94ac-4021-9cce-911093e66d4a}" showlabel="false">
+                        <labels>
+                          <label description="" languagecode="1033" />
+                        </labels>
+                      </cell>
+                    </row>
+                  </rows>
+                </section>
+              </sections>
+            </column>
+            <column width="33%">
+              <sections>
+                <section id="{1fa295e7-b28b-4fe9-a898-3ca386f8b700}" name="tab_1_column_3_section_1" columns="1" showlabel="false" showbar="false" IsUserDefined="0" labelwidth="130" labelid="{a348b0a2-74c8-4c67-abe2-0aeca94cb7c3}" visible="false">
+                  <labels>
+                    <label description="New Section" languagecode="1033" />
+                  </labels>
+                  <rows>
+                    <row>
+                      <cell id="{bd84e132-8734-46fc-829b-3c068d3308d8}" labelid="{775a9a12-6414-4850-97a5-0ca8bd6dc234}" showlabel="false">
+                        <labels>
+                          <label description="" languagecode="1033" />
+                        </labels>
+                      </cell>
+                    </row>
+                  </rows>
+                </section>
+              </sections>
+            </column>
+          </columns>
+        </tab>
+      </tabs>
+    </form>
+    <IsCustomizable>1</IsCustomizable>
+    <CanBeDeleted>1</CanBeDeleted>
+    <LocalizedNames>
+      <LocalizedName description="Internal Note Quick Create" languagecode="1033" />
+    </LocalizedNames>
+  </systemform>
+</forms>

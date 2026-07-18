@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<savedqueries xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <savedquery>
+    <IsCustomizable>1</IsCustomizable>
+    <CanBeDeleted>0</CanBeDeleted>
+    <isquickfindquery>1</isquickfindquery>
+    <isprivate>0</isprivate>
+    <isdefault>1</isdefault>
+    <savedqueryid>{ec2c45c6-3d50-42a5-b089-8f173c902be3}</savedqueryid>
+    <layoutxml>
+      <grid name="resultset" jump="gd_name" select="1" icon="1" preview="1">
+        <row name="result" id="gd_supportticketid">
+          <cell name="gd_ticketnumber" width="150" />
+          <cell name="gd_name" width="300" />
+          <cell name="statuscode" width="150" />
+          <cell name="gd_priority" width="120" />
+          <cell name="gd_app" width="150" />
+          <cell name="gd_account" width="180" />
+          <cell name="modifiedon" width="125" />
+        </row>
+      </grid>
+    </layoutxml>
+    <querytype>4</querytype>
+    <fetchxml>
+      <fetch version="1.0" mapping="logical">
+        <entity name="gd_supportticket">
+          <attribute name="gd_supportticketid" />
+          <attribute name="gd_ticketnumber" />
+          <attribute name="gd_name" />
+          <attribute name="statuscode" />
+          <attribute name="gd_priority" />
+          <attribute name="gd_app" />
+          <attribute name="gd_account" />
+          <attribute name="modifiedon" />
+          <order attribute="modifiedon" descending="true" />
+          <filter type="and">
+            <condition attribute="statecode" operator="eq" value="0" />
+          </filter>
+          <filter type="or" isquickfindfields="1">
+            <condition attribute="gd_name" operator="like" value="{0}" />
+            <condition attribute="gd_ticketnumber" operator="like" value="{0}" />
+          </filter>
+        </entity>
+      </fetch>
+    </fetchxml>
+    <IntroducedVersion>1.0.0.0</IntroducedVersion>
+    <LocalizedNames>
+      <LocalizedName description="Quick Find Active Support Tickets" languagecode="1033" />
+    </LocalizedNames>
+  </savedquery>
+</savedqueries>

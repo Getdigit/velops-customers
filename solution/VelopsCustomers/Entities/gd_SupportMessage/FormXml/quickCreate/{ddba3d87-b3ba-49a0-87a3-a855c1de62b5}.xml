@@ -1,0 +1,96 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<forms xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <systemform>
+    <formid>{ddba3d87-b3ba-49a0-87a3-a855c1de62b5}</formid>
+    <IntroducedVersion>1.0.0.0</IntroducedVersion>
+    <FormPresentation>1</FormPresentation>
+    <FormActivationState>1</FormActivationState>
+    <form>
+      <tabs>
+        <tab id="{f342aa6c-f275-4e12-859e-8f3c98964de3}" name="tab_1" showlabel="false" labelid="{1c2dcd17-2403-43ff-9bc9-035a8d4913f8}">
+          <labels>
+            <label description="New Tab" languagecode="1033" />
+          </labels>
+          <columns>
+            <column width="34%">
+              <sections>
+                <section id="{829a2b17-ec99-438b-bbf1-3c845645f694}" name="tab_1_column_1_section_1" columns="1" showlabel="false" showbar="false" IsUserDefined="0" labelwidth="130" labelid="{14ec9994-4740-45e4-8bcc-2e283509e6e6}">
+                  <labels>
+                    <label description="GENERAL" languagecode="1033" />
+                  </labels>
+                  <rows>
+                    <row>
+                      <cell id="{0fbeaf46-0b96-4e3e-a4c7-abf511a31332}">
+                        <labels>
+                          <label description="Ticket" languagecode="1033" />
+                        </labels>
+                        <control id="gd_ticket" classid="{270BD3DB-D9AF-4782-9025-509E298DEC0A}" datafieldname="gd_ticket" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{a499526a-4aef-4a0c-aa5c-c6502a8f4185}">
+                        <labels>
+                          <label description="Direction" languagecode="1033" />
+                        </labels>
+                        <control id="gd_direction" classid="{3EF39988-22BB-4f0b-BBBE-64B5A3748AEE}" datafieldname="gd_direction" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{5b85cd04-7956-4c07-a50d-b2a62c4fd0ca}" rowspan="8" auto="false">
+                        <labels>
+                          <label description="Message" languagecode="1033" />
+                        </labels>
+                        <control id="gd_body" classid="{E0DECE4B-6FC8-4a8f-A065-082708572369}" datafieldname="gd_body" />
+                      </cell>
+                    </row>
+                  </rows>
+                </section>
+              </sections>
+            </column>
+            <column width="33%">
+              <sections>
+                <section id="{f52ba1fb-9a29-4b83-ac88-26cc5dcdc15e}" name="tab_1_column_2_section_1" columns="1" showlabel="false" showbar="false" IsUserDefined="0" labelwidth="130" labelid="{0fe13015-daaa-4e8d-8103-c26e7bd7f9ba}" visible="false">
+                  <labels>
+                    <label description="New Section" languagecode="1033" />
+                  </labels>
+                  <rows>
+                    <row>
+                      <cell id="{3914f9de-2874-4805-bc82-9b8331361810}" labelid="{835e1235-9afd-4cba-b9f5-fbc0ba92639d}" showlabel="false">
+                        <labels>
+                          <label description="" languagecode="1033" />
+                        </labels>
+                      </cell>
+                    </row>
+                  </rows>
+                </section>
+              </sections>
+            </column>
+            <column width="33%">
+              <sections>
+                <section id="{94fde9c9-1ddc-4cc0-be76-bbfb0d08c2fa}" name="tab_1_column_3_section_1" columns="1" showlabel="false" showbar="false" IsUserDefined="0" labelwidth="130" labelid="{e20672b5-4fb7-4e20-b7b2-0030441a4974}" visible="false">
+                  <labels>
+                    <label description="New Section" languagecode="1033" />
+                  </labels>
+                  <rows>
+                    <row>
+                      <cell id="{1c58c6c1-6d5a-427c-83cb-7fafe4469e19}" labelid="{18e57788-f291-4d1c-a66a-33ef9bff47b3}" showlabel="false">
+                        <labels>
+                          <label description="" languagecode="1033" />
+                        </labels>
+                      </cell>
+                    </row>
+                  </rows>
+                </section>
+              </sections>
+            </column>
+          </columns>
+        </tab>
+      </tabs>
+    </form>
+    <IsCustomizable>1</IsCustomizable>
+    <CanBeDeleted>1</CanBeDeleted>
+    <LocalizedNames>
+      <LocalizedName description="Support Message Quick Create" languagecode="1033" />
+    </LocalizedNames>
+  </systemform>
+</forms>

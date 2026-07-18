@@ -1,0 +1,132 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<forms xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <systemform>
+    <formid>{808031b0-f3af-434f-8a16-5a37bfdc31ba}</formid>
+    <IntroducedVersion>1.0.0.0</IntroducedVersion>
+    <FormPresentation>1</FormPresentation>
+    <FormActivationState>1</FormActivationState>
+    <form headerdensity="HighWithControls">
+      <tabs>
+        <tab verticallayout="true" id="{c55892fa-1b39-4a3c-9ec2-37e47586d9f2}" IsUserDefined="1">
+          <labels>
+            <label description="General" languagecode="1033" />
+          </labels>
+          <columns>
+            <column width="100%">
+              <sections>
+                <section showlabel="true" showbar="false" IsUserDefined="0" id="{2623ecf8-4028-440a-b4e9-d584e421eac6}" columns="1">
+                  <labels>
+                    <label description="General" languagecode="1033" />
+                  </labels>
+                  <rows>
+                    <row>
+                      <cell id="{5745f597-1e7e-4c78-8908-0fb9490d546a}">
+                        <labels>
+                          <label description="File name" languagecode="1033" />
+                        </labels>
+                        <control id="gd_name" classid="{4273EDBD-AC1D-40d3-9FB2-095C621B552D}" datafieldname="gd_name" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{f3afcc5d-6170-47af-b6b9-06ebb298280a}">
+                        <labels>
+                          <label description="Ticket" languagecode="1033" />
+                        </labels>
+                        <control id="gd_ticket" classid="{270BD3DB-D9AF-4782-9025-509E298DEC0A}" datafieldname="gd_ticket" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{01e720d4-f693-4b6e-9641-02ef95d442f0}">
+                        <labels>
+                          <label description="Message" languagecode="1033" />
+                        </labels>
+                        <control id="gd_message" classid="{270BD3DB-D9AF-4782-9025-509E298DEC0A}" datafieldname="gd_message" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{b2d012c1-85c0-497b-b599-cbf3a3574d32}">
+                        <labels>
+                          <label description="MIME type" languagecode="1033" />
+                        </labels>
+                        <control id="gd_mimetype" classid="{4273EDBD-AC1D-40d3-9FB2-095C621B552D}" datafieldname="gd_mimetype" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{f16b6d0a-3db0-4bb1-9c89-071cd11270f0}">
+                        <labels>
+                          <label description="Is image" languagecode="1033" />
+                        </labels>
+                        <control id="gd_isimage" classid="{67FAC785-CD58-4F9F-ABB3-4B7DDC6ED5ED}" datafieldname="gd_isimage" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{06d15cd0-e437-435f-b596-3efbb616ee98}">
+                        <labels>
+                          <label description="File" languagecode="1033" />
+                        </labels>
+                        <control id="gd_file" classid="{0A7FF475-B016-4687-9CE5-042BFDBD6519}" datafieldname="gd_file" />
+                      </cell>
+                    </row>
+                  </rows>
+                </section>
+              </sections>
+            </column>
+          </columns>
+        </tab>
+      </tabs>
+      <header id="{b34ba69e-1bae-40c9-bd11-9059887b8f4e}" celllabelposition="Top" columns="111" labelwidth="115" celllabelalignment="Left">
+        <rows>
+          <row>
+            <cell id="{a3e7fa19-f5a1-44d1-b11b-aeab4afc4785}" showlabel="false">
+              <labels>
+                <label description="" languagecode="1033" />
+              </labels>
+            </cell>
+            <cell id="{a47101fc-01e7-40c4-bbc8-d63fc8771cc7}" showlabel="false">
+              <labels>
+                <label description="" languagecode="1033" />
+              </labels>
+            </cell>
+            <cell id="{59bed6c1-f712-4e26-804d-9799eb9e6e5b}" showlabel="false">
+              <labels>
+                <label description="" languagecode="1033" />
+              </labels>
+            </cell>
+          </row>
+        </rows>
+      </header>
+      <footer id="{d8a14925-9c2f-4055-ad91-282910b521bc}" celllabelposition="Top" columns="111" labelwidth="115" celllabelalignment="Left">
+        <rows>
+          <row>
+            <cell id="{516da2c0-4e88-4726-a166-93b998a000ea}" showlabel="false">
+              <labels>
+                <label description="" languagecode="1033" />
+              </labels>
+            </cell>
+            <cell id="{3fabad35-77b4-40df-9b93-0a2f5db9423a}" showlabel="false">
+              <labels>
+                <label description="" languagecode="1033" />
+              </labels>
+            </cell>
+            <cell id="{d71d7af1-8ea0-4ca8-88c6-a04eb54a399c}" showlabel="false">
+              <labels>
+                <label description="" languagecode="1033" />
+              </labels>
+            </cell>
+          </row>
+        </rows>
+      </footer>
+      <DisplayConditions Order="0" FallbackForm="true">
+        <Everyone />
+      </DisplayConditions>
+    </form>
+    <IsCustomizable>1</IsCustomizable>
+    <CanBeDeleted>1</CanBeDeleted>
+    <LocalizedNames>
+      <LocalizedName description="Information" languagecode="1033" />
+    </LocalizedNames>
+    <Descriptions>
+      <Description description="A form for this entity." languagecode="1033" />
+    </Descriptions>
+  </systemform>
+</forms>

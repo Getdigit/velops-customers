@@ -1,0 +1,15 @@
+{
+  "name": "velops-customers-formscripts",
+  "version": "1.0.0",
+  "description": "TypeScript form scripts for the VelopsCustomers Dataverse web resources",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/xrm": "^9.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.9.0"
+  }
+}

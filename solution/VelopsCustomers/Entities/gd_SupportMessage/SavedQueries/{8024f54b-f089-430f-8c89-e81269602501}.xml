@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<savedqueries xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <savedquery>
+    <IsCustomizable>1</IsCustomizable>
+    <CanBeDeleted>0</CanBeDeleted>
+    <isquickfindquery>0</isquickfindquery>
+    <isprivate>0</isprivate>
+    <isdefault>1</isdefault>
+    <savedqueryid>{8024f54b-f089-430f-8c89-e81269602501}</savedqueryid>
+    <layoutxml>
+      <grid name="resultset" jump="gd_name" select="1" icon="1" preview="1">
+        <row name="result" id="gd_supportmessageid">
+          <cell name="gd_name" width="300" />
+          <cell name="gd_ticket" width="150" />
+          <cell name="gd_direction" width="125" />
+          <cell name="gd_authorname" width="150" />
+          <cell name="createdon" width="125" />
+        </row>
+      </grid>
+    </layoutxml>
+    <querytype>1</querytype>
+    <fetchxml>
+      <fetch version="1.0" mapping="logical">
+        <entity name="gd_supportmessage">
+          <attribute name="gd_supportmessageid" />
+          <attribute name="gd_name" />
+          <attribute name="gd_ticket" />
+          <attribute name="gd_direction" />
+          <attribute name="gd_authorname" />
+          <attribute name="createdon" />
+          <order attribute="createdon" descending="false" />
+        </entity>
+      </fetch>
+    </fetchxml>
+    <IntroducedVersion>1.0.0.0</IntroducedVersion>
+    <LocalizedNames>
+      <LocalizedName description="Support Message Advanced Find View" languagecode="1033" />
+    </LocalizedNames>
+  </savedquery>
+</savedqueries>

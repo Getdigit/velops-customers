@@ -1,0 +1,57 @@
+"use strict";
+(() => {
+  // src/gd_ticket_form.ts
+  var STATUS_WAITING_ON_CUSTOMER = 122690004;
+  var STATUS_RESOLVED = 122690005;
+  var STATECODE_INACTIVE = 1;
+  var WAITING_NOTIFICATION_ID = "gd_ticket_waiting";
+  var CLOSED_NOTIFICATION_ID = "gd_ticket_closed";
+  var WAITING_MESSAGE = "Waiting on the customer \u2014 the ball is in their court.";
+  var CLOSED_MESSAGE = "This ticket is closed. The customer can reopen it from the portal.";
+  function applyState(formContext) {
+    const statusAttr = formContext.getAttribute("statuscode");
+    const stateAttr = formContext.getAttribute("statecode");
+    const status = statusAttr ? statusAttr.getValue() : null;
+    const state = stateAttr ? stateAttr.getValue() : null;
+    const resolutionAttr = formContext.getAttribute(
+      "gd_resolutionsummary"
+    );
+    if (resolutionAttr) {
+      resolutionAttr.setRequiredLevel(
+        status === STATUS_RESOLVED ? "required" : "none"
+      );
+    }
+    if (status === STATUS_WAITING_ON_CUSTOMER) {
+      formContext.ui.setFormNotification(
+        WAITING_MESSAGE,
+        "INFO",
+        WAITING_NOTIFICATION_ID
+      );
+    } else {
+      formContext.ui.clearFormNotification(WAITING_NOTIFICATION_ID);
+    }
+    if (state === STATECODE_INACTIVE) {
+      formContext.ui.setFormNotification(
+        CLOSED_MESSAGE,
+        "INFO",
+        CLOSED_NOTIFICATION_ID
+      );
+    } else {
+      formContext.ui.clearFormNotification(CLOSED_NOTIFICATION_ID);
+    }
+  }
+  function onStatusChange(executionContext) {
+    applyState(executionContext.getFormContext());
+  }
+  function onLoad(executionContext) {
+    const formContext = executionContext.getFormContext();
+    const statusAttr = formContext.getAttribute("statuscode");
+    if (statusAttr) {
+      statusAttr.addOnChange(onStatusChange);
+    }
+    applyState(formContext);
+  }
+  var _a;
+  var ns = window.GD = (_a = window.GD) != null ? _a : {};
+  ns.TicketForm = { onLoad, onStatusChange };
+})();

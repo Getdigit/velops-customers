@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<EntityRelationships xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <EntityRelationship Name="gd_accountapp_Account_account" />
+  <EntityRelationship Name="gd_accountapp_App_gd_app" />
+  <EntityRelationship Name="gd_internalnote_Ticket_gd_supportticket" />
+  <EntityRelationship Name="gd_supportmessage_AuthorContact_contact" />
+  <EntityRelationship Name="gd_supportmessage_Ticket_gd_supportticket" />
+  <EntityRelationship Name="gd_supportticket_Account_account" />
+  <EntityRelationship Name="gd_supportticket_App_gd_app" />
+  <EntityRelationship Name="gd_supportticket_Contact_contact" />
+  <EntityRelationship Name="gd_ticketattachment_Message_gd_supportmessage" />
+  <EntityRelationship Name="gd_ticketattachment_Ticket_gd_supportticket" />
+</EntityRelationships>

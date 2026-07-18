@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<forms xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <systemform>
+    <formid>{ffd945d0-fbc1-4b9c-b46f-2c5fc62646b7}</formid>
+    <IntroducedVersion>1.0.0.0</IntroducedVersion>
+    <FormPresentation>1</FormPresentation>
+    <FormActivationState>1</FormActivationState>
+    <form>
+      <tabs>
+        <tab verticallayout="true" id="{201a8c44-5723-444c-9b39-50664f6a279c}" IsUserDefined="1">
+          <labels>
+            <label description="" languagecode="1033" />
+          </labels>
+          <columns>
+            <column width="100%">
+              <sections>
+                <section showlabel="false" showbar="false" IsUserDefined="0" id="{0be72890-1a12-4a5a-9a31-fa877bf88e2f}">
+                  <labels>
+                    <label description="General" languagecode="1033" />
+                  </labels>
+                  <rows>
+                    <row>
+                      <cell id="{4e47110c-4d86-47df-a9f6-a77ea0a80e36}">
+                        <labels>
+                          <label description="Team" languagecode="1033" />
+                        </labels>
+                        <control id="gd_account" classid="{270BD3DB-D9AF-4782-9025-509E298DEC0A}" datafieldname="gd_account" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{09903279-ebab-43df-bb9d-9b82aa540a92}">
+                        <labels>
+                          <label description="App" languagecode="1033" />
+                        </labels>
+                        <control id="gd_app" classid="{270BD3DB-D9AF-4782-9025-509E298DEC0A}" datafieldname="gd_app" />
+                      </cell>
+                    </row>
+                  </rows>
+                </section>
+              </sections>
+            </column>
+          </columns>
+        </tab>
+      </tabs>
+    </form>
+    <IsCustomizable>1</IsCustomizable>
+    <CanBeDeleted>1</CanBeDeleted>
+    <LocalizedNames>
+      <LocalizedName description="Team App Quick Create" languagecode="1033" />
+    </LocalizedNames>
+  </systemform>
+</forms>

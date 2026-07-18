@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<AppModule>
+  <UniqueName>gd_VelopsSupportHub</UniqueName>
+  <IntroducedVersion>1.0.0.0</IntroducedVersion>
+  <OptimizedFor></OptimizedFor>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+  <FormFactor>1</FormFactor>
+  <ClientType>4</ClientType>
+  <NavigationType>0</NavigationType>
+  <AppModuleComponents>
+    <AppModuleComponent type="1" schemaName="account" />
+    <AppModuleComponent type="1" schemaName="contact" />
+    <AppModuleComponent type="1" schemaName="gd_accountapp" />
+    <AppModuleComponent type="1" schemaName="gd_app" />
+    <AppModuleComponent type="1" schemaName="gd_internalnote" />
+    <AppModuleComponent type="1" schemaName="gd_supportmessage" />
+    <AppModuleComponent type="1" schemaName="gd_supportticket" />
+    <AppModuleComponent type="1" schemaName="gd_ticketattachment" />
+    <AppModuleComponent type="62" schemaName="gd_VelopsSupportHub" />
+  </AppModuleComponents>
+  <AppModuleRoleMaps>
+    <Role id="{c1dba787-bf0e-4583-83b8-6ece39f07e8f}" />
+  </AppModuleRoleMaps>
+  <LocalizedNames>
+    <LocalizedName description="VelOps Support Hub" languagecode="1033" />
+  </LocalizedNames>
+  <Descriptions>
+    <Description description="Model-driven workspace for the VelOps team to handle customer support tickets." languagecode="1033" />
+  </Descriptions>
+  <appsettings>
+    <appsetting settingdefinitionid.uniquename="AllowNotificationsEarlyAccess">
+      <iscustomizable>1</iscustomizable>
+      <value>true</value>
+    </appsetting>
+    <appsetting settingdefinitionid.uniquename="AppChannel">
+      <iscustomizable>1</iscustomizable>
+      <value>1</value>
+    </appsetting>
+    <appsetting settingdefinitionid.uniquename="m365copilotmodelappenabled">
+      <iscustomizable>1</iscustomizable>
+      <value>2</value>
+    </appsetting>
+    <appsetting settingdefinitionid.uniquename="msdyn_enablertecopilot">
+      <iscustomizable>1</iscustomizable>
+      <value>true</value>
+    </appsetting>
+  </appsettings>
+</AppModule>

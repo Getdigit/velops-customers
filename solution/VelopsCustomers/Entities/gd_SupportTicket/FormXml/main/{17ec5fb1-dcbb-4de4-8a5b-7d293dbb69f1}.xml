@@ -1,0 +1,283 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<forms xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <systemform>
+    <formid>{17ec5fb1-dcbb-4de4-8a5b-7d293dbb69f1}</formid>
+    <IntroducedVersion>1.0.0.0</IntroducedVersion>
+    <FormPresentation>1</FormPresentation>
+    <FormActivationState>1</FormActivationState>
+    <form headerdensity="HighWithControls">
+      <tabs>
+        <tab name="tab_conversation" id="c8fd17ff-9a92-4084-ac5b-c2fa9a7cf5e2" IsUserDefined="0" locklevel="0" showlabel="true">
+          <labels>
+            <label description="Conversation" languagecode="1033" />
+          </labels>
+          <columns>
+            <column width="100%">
+              <sections>
+                <section name="section_conversation" id="fa4ee4e5-1f2f-4772-8b5b-b80c74fe77ff" IsUserDefined="0" locklevel="0" showlabel="false" showbar="false" layout="varwidth" celllabelalignment="Left" celllabelposition="Left" columns="1" labelwidth="115">
+                  <labels>
+                    <label description="Conversation" languagecode="1033" />
+                  </labels>
+                  <rows>
+                    <row>
+                      <cell rowspan="24" id="{52837fe9-d86a-4904-87e3-5d0bfc3a0e66}" showlabel="false" colspan="1" auto="false">
+                        <labels>
+                          <label description="Ticket conversation" languagecode="1033" />
+                        </labels>
+                        <control id="WebResource_TicketConversation" classid="{9FDF5F91-88B1-47F4-AD53-C11EFC01A01D}">
+                          <parameters>
+                            <Url>gd_ticketconversation</Url>
+                            <PassParameters>true</PassParameters>
+                            <Security>false</Security>
+                            <Scrolling>auto</Scrolling>
+                            <Border>false</Border>
+                            <ShowOnMobileClient>false</ShowOnMobileClient>
+                            <WebResourceId>{ee352910-a356-4009-a00b-1dd3535bf895}</WebResourceId>
+                          </parameters>
+                        </control>
+                        <events>
+                          <event name="onload" application="false" active="false" />
+                        </events>
+                      </cell>
+                    </row>
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                  </rows>
+                </section>
+              </sections>
+            </column>
+          </columns>
+        </tab>
+        <tab name="tab_details" id="74735cef-e27f-4a09-b1f0-67055d9951ec" IsUserDefined="0" locklevel="0" showlabel="true">
+          <labels>
+            <label description="Details" languagecode="1033" />
+          </labels>
+          <columns>
+            <column width="100%">
+              <sections>
+                <section name="section_ticket" id="0988a58e-a7de-47af-8cf9-c177ccbb0267" IsUserDefined="0" locklevel="0" showlabel="true" showbar="false" layout="varwidth" celllabelalignment="Left" celllabelposition="Left" columns="2" labelwidth="115">
+                  <labels>
+                    <label description="Ticket" languagecode="1033" />
+                  </labels>
+                  <rows>
+                    <row>
+                      <cell id="{92f3b3a8-3bf2-44f2-bfd1-1373daa756f4}" locklevel="0" colspan="1" rowspan="1">
+                        <labels>
+                          <label description="Subject" languagecode="1033" />
+                        </labels>
+                        <control id="gd_name" classid="{4273EDBD-AC1D-40D3-9FB2-095C621B552D}" datafieldname="gd_name" disabled="false" />
+                      </cell>
+                      <cell id="{9280bc98-7eb9-43fd-ae80-0c0e8d326b17}" locklevel="0" colspan="1" rowspan="1">
+                        <labels>
+                          <label description="Ticket number" languagecode="1033" />
+                        </labels>
+                        <control id="gd_ticketnumber" classid="{4273EDBD-AC1D-40D3-9FB2-095C621B552D}" datafieldname="gd_ticketnumber" disabled="true" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{92ee3d79-79b9-4f68-8bc8-69cdd99d306f}" locklevel="0" colspan="1" rowspan="1">
+                        <labels>
+                          <label description="Type" languagecode="1033" />
+                        </labels>
+                        <control id="gd_tickettype" classid="{3EF39988-22BB-4F0B-BBBE-64B5A3748AEE}" datafieldname="gd_tickettype" disabled="false" />
+                      </cell>
+                      <cell id="{acc9a5e0-8caf-40c9-975b-bc259651c280}" locklevel="0" colspan="1" rowspan="1">
+                        <labels>
+                          <label description="Priority" languagecode="1033" />
+                        </labels>
+                        <control id="gd_priority" classid="{3EF39988-22BB-4F0B-BBBE-64B5A3748AEE}" datafieldname="gd_priority" disabled="false" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{b8a64fb7-9952-4fa3-b43a-bdab8c52cb77}" locklevel="0" colspan="1" rowspan="1">
+                        <labels>
+                          <label description="Product area" languagecode="1033" />
+                        </labels>
+                        <control id="gd_app" classid="{270BD3DB-D9AF-4782-9025-509E298DEC0A}" datafieldname="gd_app" disabled="false" />
+                      </cell>
+                      <cell id="{4b10ccc1-94f0-4572-93a9-19ffbd4cdfd4}" locklevel="0" colspan="1" rowspan="1">
+                        <labels>
+                          <label description="Source" languagecode="1033" />
+                        </labels>
+                        <control id="gd_source" classid="{3EF39988-22BB-4F0B-BBBE-64B5A3748AEE}" datafieldname="gd_source" disabled="false" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{9a7780d9-5686-4cfd-be85-ee3deddad2fc}" locklevel="0" colspan="1" rowspan="1">
+                        <labels>
+                          <label description="Submitted by" languagecode="1033" />
+                        </labels>
+                        <control id="gd_contact" classid="{270BD3DB-D9AF-4782-9025-509E298DEC0A}" datafieldname="gd_contact" disabled="false" />
+                      </cell>
+                      <cell id="{c8b42c00-20e8-4730-a866-868b25ac676d}" locklevel="0" colspan="1" rowspan="1">
+                        <labels>
+                          <label description="Team" languagecode="1033" />
+                        </labels>
+                        <control id="gd_account" classid="{270BD3DB-D9AF-4782-9025-509E298DEC0A}" datafieldname="gd_account" disabled="false" />
+                      </cell>
+                    </row>
+                    <row>
+                      <cell id="{16696961-c4d9-4615-8fa3-a74d889ed54f}" locklevel="0" colspan="2" rowspan="6" auto="false">
+                        <labels>
+                          <label description="Description" languagecode="1033" />
+                        </labels>
+                        <control id="gd_description" classid="{E0DECE4B-6FC8-4A8F-A065-082708572369}" datafieldname="gd_description" disabled="false" />
+                      </cell>
+                    </row>
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                  </rows>
+                </section>
+                <section name="section_resolution" id="2dda6ea4-7555-4516-8c8c-5eca93a80f5b" IsUserDefined="0" locklevel="0" showlabel="true" showbar="false" layout="varwidth" celllabelalignment="Left" celllabelposition="Left" columns="2" labelwidth="115">
+                  <labels>
+                    <label description="Resolution" languagecode="1033" />
+                  </labels>
+                  <rows>
+                    <row>
+                      <cell id="{dbdbff91-15ef-4894-99a2-33147ca0da5d}" locklevel="0" colspan="1" rowspan="4" auto="false">
+                        <labels>
+                          <label description="Resolution summary" languagecode="1033" />
+                        </labels>
+                        <control id="gd_resolutionsummary" classid="{E0DECE4B-6FC8-4A8F-A065-082708572369}" datafieldname="gd_resolutionsummary" disabled="false" />
+                      </cell>
+                      <cell id="{60ed9ffb-ea5b-4d61-ae3b-e3a1b800e133}" locklevel="0" colspan="1" rowspan="1">
+                        <labels>
+                          <label description="Satisfaction rating" languagecode="1033" />
+                        </labels>
+                        <control id="gd_satisfactionrating" classid="{C3EFE0C3-0EC6-42BE-8349-CBD9079DFD8E}" datafieldname="gd_satisfactionrating" disabled="false" />
+                      </cell>
+                    </row>
+                    <row />
+                    <row />
+                    <row />
+                  </rows>
+                </section>
+                <section name="section_attachments" id="064d0e37-5e26-4801-9b9f-30578b52dae5" IsUserDefined="0" locklevel="0" showlabel="true" showbar="false" layout="varwidth" celllabelalignment="Left" celllabelposition="Left" columns="1" labelwidth="115">
+                  <labels>
+                    <label description="Attachments" languagecode="1033" />
+                  </labels>
+                  <rows>
+                    <row>
+                      <cell locklevel="0" id="{7f9de3a9-72f6-4315-88cf-84905840d102}" rowspan="6" colspan="1" auto="false" showlabel="true">
+                        <labels>
+                          <label description="Attachments" languagecode="1033" />
+                        </labels>
+                        <control indicationOfSubgrid="true" id="Subgrid_Attachments" classid="{E7A81278-8635-4D9E-8D4D-59480B391C5B}">
+                          <parameters>
+                            <RecordsPerPage>10</RecordsPerPage>
+                            <AutoExpand>Fixed</AutoExpand>
+                            <EnableQuickFind>false</EnableQuickFind>
+                            <EnableViewPicker>false</EnableViewPicker>
+                            <EnableChartPicker>false</EnableChartPicker>
+                            <ChartGridMode>All</ChartGridMode>
+                            <RelationshipName>gd_ticketattachment_Ticket_gd_supportticket</RelationshipName>
+                            <TargetEntityType>gd_ticketattachment</TargetEntityType>
+                          </parameters>
+                        </control>
+                      </cell>
+                    </row>
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                    <row />
+                  </rows>
+                </section>
+              </sections>
+            </column>
+          </columns>
+        </tab>
+      </tabs>
+      <header id="{fadce309-f24c-43b6-8c69-9e15d4b0fe5e}" celllabelposition="Top" columns="111" labelwidth="115" celllabelalignment="Left">
+        <rows>
+          <row>
+            <cell id="{74d0cb2a-aff5-4cb0-a463-15e64b5fd1ee}" visible="true" colspan="1" rowspan="1">
+              <labels>
+                <label description="Status Reason" languagecode="1033" />
+              </labels>
+              <control id="header_statuscode" classid="{5D68B988-0661-4db2-BC3E-17598AD3BE6C}" datafieldname="statuscode" disabled="false" />
+            </cell>
+            <cell id="{53a7fd26-5777-4dc2-8573-45a0094823fc}" visible="true" colspan="1" rowspan="1">
+              <labels>
+                <label description="Priority" languagecode="1033" />
+              </labels>
+              <control id="header_gd_priority" classid="{3EF39988-22BB-4F0B-BBBE-64B5A3748AEE}" datafieldname="gd_priority" disabled="false" />
+            </cell>
+            <cell id="{ee982cc5-653c-4af0-b623-b33dbb3ec4b5}" visible="true" colspan="1" rowspan="1">
+              <labels>
+                <label description="Team" languagecode="1033" />
+              </labels>
+              <control id="header_gd_account" classid="{270BD3DB-D9AF-4782-9025-509E298DEC0A}" datafieldname="gd_account" disabled="false" />
+            </cell>
+          </row>
+        </rows>
+      </header>
+      <footer id="{eefc8198-74c0-4e5e-8e90-9c41960876e1}" celllabelposition="Top" columns="111" labelwidth="115" celllabelalignment="Left">
+        <rows>
+          <row>
+            <cell id="{911f394b-6eef-4093-be8a-3c302a59abfb}" showlabel="false">
+              <labels>
+                <label description="" languagecode="1033" />
+              </labels>
+            </cell>
+            <cell id="{5743a88c-3518-479f-8f7a-b940ef8a01ff}" showlabel="false">
+              <labels>
+                <label description="" languagecode="1033" />
+              </labels>
+            </cell>
+            <cell id="{69bd8894-49f7-435b-a290-eacfc9d78eca}" showlabel="false">
+              <labels>
+                <label description="" languagecode="1033" />
+              </labels>
+            </cell>
+          </row>
+        </rows>
+      </footer>
+      <DisplayConditions Order="0" FallbackForm="true">
+        <Everyone />
+      </DisplayConditions>
+      <formLibraries>
+        <Library name="gd_ticket_form" libraryUniqueId="{a7a09ff8-7433-40eb-aa71-e6d0a3b53b30}" />
+      </formLibraries>
+      <events>
+        <event name="onload" application="false" active="false">
+          <Handlers>
+            <Handler functionName="GD.TicketForm.onLoad" libraryName="gd_ticket_form" handlerUniqueId="{15a1f984-a507-43bc-8b1d-745db803c5d1}" enabled="true" parameters="" passExecutionContext="true" />
+          </Handlers>
+        </event>
+      </events>
+    </form>
+    <IsCustomizable>1</IsCustomizable>
+    <CanBeDeleted>1</CanBeDeleted>
+    <LocalizedNames>
+      <LocalizedName description="Ticket" languagecode="1033" />
+    </LocalizedNames>
+    <Descriptions>
+      <Description description="Main form for support tickets with the conversation panel and ticket details." languagecode="1033" />
+    </Descriptions>
+  </systemform>
+</forms>
