@@ -1,0 +1,16 @@
+{
+  "name": "velops-ai-proxy",
+  "version": "1.0.0",
+  "description": "Stateless Azure Function proxy to the Anthropic Messages API for the VelOps Hub AI planning assistant. Holds the API key server-side; does no Dataverse work.",
+  "type": "commonjs",
+  "main": "src/functions/*.js",
+  "scripts": {
+    "start": "func start"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.5.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

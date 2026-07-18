@@ -1,0 +1,13 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "ANTHROPIC_API_KEY": "REPLACE_WITH_YOUR_KEY_LOCALLY_ONLY",
+    "ALLOWED_ORIGINS": "https://apps.powerapps.com,https://apps.gov.powerapps.us"
+  },
+  "Host": {
+    "CORS": "*",
+    "CORSCredentials": false
+  }
+}

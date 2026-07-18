@@ -1,0 +1,27 @@
+# Solution zip files (only the unpacked solution/VelopsCustomers/ folder is tracked)
+*.zip
+
+# Power Platform local state
+.power/
+**/dist/
+**/node_modules/
+
+# Local tool state (not in repo)
+.claude/
+.playwright-mcp/
+
+# Azure Functions local settings (secrets)
+ai-proxy/local.settings.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Office lock files
+~$*
+**/~$*
+
+# .NET build output
+**/bin/
+**/obj/
+.vs/
