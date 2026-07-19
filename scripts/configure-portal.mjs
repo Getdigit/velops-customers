@@ -45,7 +45,7 @@ const SCOPE = {
 // Many-to-many relationship / collection navigation property between table
 // permissions and web roles in the enhanced data model.
 // Source: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/mspp_entitypermission
-const PERMISSION_WEBROLE_NAV = 'mspp_entitypermission_webrole';
+// (the virtual mspp_entitypermission_webrole N:N is a non-persisting facade — see ensureRoleAssociation)
 
 // Entities that must NEVER be exposed to the portal (spec decision D1).
 const FORBIDDEN_ENTITIES = new Set(['gd_internalnote', 'annotation']);
@@ -244,16 +244,22 @@ async function upsertPermission(def, website, permissionIdsByName) {
 
 /** Associate a permission with the web role via the N:N (skip when already linked). */
 async function ensureRoleAssociation(permissionId, permissionName, role) {
+  // The virtual mspp_entitypermission_webrole N:N accepts $ref POSTs with 204
+  // but never persists them (observed 2026-07-19). The enhanced data model
+  // stores component-to-component links in the powerpagecomponent SELF N:N
+  // (powerpagecomponent_powerpagecomponent) — mspp row ids map 1:1 onto
+  // powerpagecomponent ids, so associate at that storage layer instead.
+  const NAV = 'powerpagecomponent_powerpagecomponent';
   const linked = await api(
-    `mspp_entitypermissions(${permissionId})/${PERMISSION_WEBROLE_NAV}?$select=mspp_webroleid`
+    `powerpagecomponents(${permissionId})/${NAV}?$select=powerpagecomponentid`
   );
-  if (linked.value.some((r) => r.mspp_webroleid === role.mspp_webroleid)) {
+  if (linked.value.some((c) => c.powerpagecomponentid === role.mspp_webroleid)) {
     console.log(`  = already linked to '${role.mspp_name}'`);
     return;
   }
-  await api(`mspp_entitypermissions(${permissionId})/${PERMISSION_WEBROLE_NAV}/$ref`, {
+  await api(`powerpagecomponents(${permissionId})/${NAV}/$ref`, {
     method: 'POST',
-    body: { '@odata.id': `${baseUrl()}/api/data/v9.2/mspp_webroles(${role.mspp_webroleid})` },
+    body: { '@odata.id': `${baseUrl()}/api/data/v9.2/powerpagecomponents(${role.mspp_webroleid})` },
   });
   console.log(`  + linked '${permissionName}' to '${role.mspp_name}'`);
 }

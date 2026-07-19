@@ -240,7 +240,7 @@ function expectedSiteSettingNames() {
 }
 
 // N:N navigation between mspp_entitypermission and mspp_webrole (see configure-portal.mjs).
-const PERMISSION_WEBROLE_NAV = 'mspp_entitypermission_webrole';
+// (the virtual mspp_entitypermission_webrole N:N is a non-persisting facade — links are read via powerpagecomponent_powerpagecomponent)
 
 async function verifyPortal() {
   console.error('\n== portal ==');
@@ -281,13 +281,14 @@ async function verifyPortal() {
       const permission = result.value[0];
       check('portal', `table permission '${name}' exists${tag}`, !!permission);
       if (permission && authRole) {
-        // $expand on this virtual N:N silently returns nothing — read the
-        // association via direct navigation instead (same call the configure
-        // script uses).
+        // The virtual mspp_entitypermission_webrole N:N is a non-persisting
+        // facade — the real link lives in the powerpagecomponent SELF N:N
+        // (powerpagecomponent_powerpagecomponent), where mspp ids map 1:1 onto
+        // component ids. Read it there (same layer configure-portal writes).
         const linkedResult = await api(
-          `mspp_entitypermissions(${permission.mspp_entitypermissionid})/${PERMISSION_WEBROLE_NAV}?$select=mspp_webroleid`
+          `powerpagecomponents(${permission.mspp_entitypermissionid})/powerpagecomponent_powerpagecomponent?$select=powerpagecomponentid`
         );
-        const linked = linkedResult.value.some((r) => r.mspp_webroleid === authRole.mspp_webroleid);
+        const linked = linkedResult.value.some((c) => c.powerpagecomponentid === authRole.mspp_webroleid);
         check('portal', `table permission '${name}' linked to Authenticated Users${tag}`, linked);
       }
     }
