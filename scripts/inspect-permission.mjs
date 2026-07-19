@@ -23,6 +23,16 @@ async function main() {
     ).catch((e) => ({ error: String(e?.message || e) }));
     console.log(JSON.stringify({ label, component: c }, null, 2));
   }
+
+  // Where does the permission<->webrole association really live? Dump the
+  // many-to-many metadata of both the storage table and the virtual table.
+  for (const entity of ["powerpagecomponent", "mspp_entitypermission"]) {
+    const m2m = await api(
+      `EntityDefinitions(LogicalName='${entity}')?$select=LogicalName&$expand=ManyToManyRelationships($select=SchemaName,IntersectEntityName,Entity1LogicalName,Entity2LogicalName,Entity1NavigationPropertyName,Entity2NavigationPropertyName)`,
+      { allow404: true },
+    ).catch((e) => ({ error: String(e?.message || e) }));
+    console.log(JSON.stringify({ entity, m2m: m2m?.ManyToManyRelationships ?? m2m }, null, 2));
+  }
 }
 
 main().catch(fail);
