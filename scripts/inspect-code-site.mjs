@@ -53,12 +53,26 @@ async function main() {
       );
     }
 
+    const { value: pageTemplates } = await api(
+      `mspp_pagetemplates?$select=mspp_pagetemplateid,mspp_name,mspp_type,_mspp_webtemplateid_value&$filter=_mspp_websiteid_value eq ${site.mspp_websiteid}`,
+    );
+    const templateIds = new Set(templates.map((t) => t.mspp_webtemplateid));
+    console.error(`page templates: ${pageTemplates.length}`);
+    for (const pt of pageTemplates) {
+      const ref = pt._mspp_webtemplateid_value;
+      const dangling = ref && !templateIds.has(ref) ? "  <-- DANGLING web template ref" : "";
+      console.error(`  - ${pt.mspp_name}  type=${pt.mspp_type}  webtemplate=${ref}${dangling}`);
+    }
+
     const { value: pages } = await api(
-      `mspp_webpages?$select=mspp_webpageid,mspp_name,mspp_isroot&$filter=_mspp_websiteid_value eq ${site.mspp_websiteid}&$orderby=mspp_name asc`,
+      `mspp_webpages?$select=mspp_webpageid,mspp_name,mspp_isroot,_mspp_pagetemplateid_value,mspp_copy&$filter=_mspp_websiteid_value eq ${site.mspp_websiteid}&$orderby=mspp_name asc`,
     );
     console.error(`webpages: ${pages.length}`);
     for (const p of pages) {
-      console.error(`  - ${p.mspp_name}  root=${p.mspp_isroot}`);
+      const m = spaMarkers(p.mspp_copy);
+      console.error(
+        `  - ${p.mspp_name}  root=${p.mspp_isroot}  pagetemplate=${p._mspp_pagetemplateid_value}  copyLen=${m.length}  copyRoot=${m.root}  copyBundle=${m.bundle}`,
+      );
     }
 
     const { value: files } = await api(
@@ -69,6 +83,15 @@ async function main() {
       console.error(`  - ${f.mspp_name}`);
     }
   }
+
+  // Where does pac keep the cross-run manifest that still maps the Home/Header/
+  // Footer templates to ids of the first (deleted) site? Look for candidate
+  // entities and any component rows named like a manifest.
+  console.error("\n=== manifest hunt ===");
+  const defs = await api(
+    "EntityDefinitions?$select=LogicalName&$filter=contains(LogicalName,'manifest')",
+  );
+  console.error(`entities with 'manifest' in the name: ${defs.value.map((d) => d.LogicalName).join(", ") || "(none)"}`);
 
   console.error("\n=== the three failed-update component ids ===");
   for (const id of FAILED_UPDATE_IDS) {
