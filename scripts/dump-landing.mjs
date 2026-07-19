@@ -2,7 +2,29 @@
 // link/meta references) so we can see WHAT the Home page actually serves.
 // Usage (CI): node scripts/dump-landing.mjs   [PORTAL_URL=https://...]
 
+import tls from "node:tls";
+
 const PORTAL_URL = (process.env.PORTAL_URL || "https://velopssupport.powerappsportals.com").replace(/\/+$/, "");
+
+// TLS probe (no cert validation): which certificate does the endpoint serve?
+const host = new URL(PORTAL_URL).hostname;
+await new Promise((resolve) => {
+  const sock = tls.connect(
+    { host, port: 443, servername: host, rejectUnauthorized: false, timeout: 10000 },
+    () => {
+      const cert = sock.getPeerCertificate();
+      console.log(`TLS probe for ${host}:`);
+      console.log(`  subject CN : ${cert.subject?.CN}`);
+      console.log(`  SANs       : ${cert.subjectaltname}`);
+      console.log(`  issuer     : ${cert.issuer?.CN}`);
+      console.log(`  valid      : ${cert.valid_from} -> ${cert.valid_to}`);
+      sock.end();
+      resolve();
+    },
+  );
+  sock.on("error", (e) => { console.log(`TLS probe error: ${e.message}`); resolve(); });
+  sock.on("timeout", () => { console.log("TLS probe timeout"); sock.destroy(); resolve(); });
+});
 
 async function fetchWithRetry(url, attempts = 4) {
   let lastErr;
