@@ -70,7 +70,18 @@ jobs:
       # site folder; portal/powerpages.config.json supplies compiledPath (./dist) and the
       # default landing page; --siteName pins the site match explicitly (CLI args win over
       # the config file). First run creates the site under "Inactive sites" (RUNBOOK ④).
+      # The content upload against a freshly provisioned (still inactive) site fails
+      # transiently on individual web files (PortalFileContentUploadFailed) — each
+      # attempt gets further and the upload is idempotent, so retry up to 4 times.
       - name: Upload code site
         shell: pwsh
         run: |
-          & $env:POWERPLATFORMTOOLS_PACPATH pages upload-code-site --rootPath portal --siteName "VelOps Support"
+          $max = 4
+          for ($i = 1; $i -le $max; $i++) {
+            & $env:POWERPLATFORMTOOLS_PACPATH pages upload-code-site --rootPath portal --siteName "VelOps Support"
+            if ($LASTEXITCODE -eq 0) { exit 0 }
+            Write-Host "upload-code-site attempt $i of $max failed (exit $LASTEXITCODE); retrying in 30s..."
+            Start-Sleep -Seconds 30
+          }
+          Write-Error "upload-code-site failed after $max attempts"
+          exit 1
