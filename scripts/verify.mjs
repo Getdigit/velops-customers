@@ -261,10 +261,16 @@ async function verifyPortal() {
   const authRole = rolesResult.value[0];
   check('portal', "built-in 'Authenticated Users' web role exists", !!authRole);
 
+  // mspp_entitypermission has no mspp_name — resolve its primary name attribute
+  // from metadata (same workaround as configure-portal.mjs).
+  const permNameAttr = (
+    await api("EntityDefinitions(LogicalName='mspp_entitypermission')?$select=PrimaryNameAttribute")
+  ).PrimaryNameAttribute;
+
   for (const name of EXPECTED_PERMISSION_NAMES) {
     const result = await api(
       `mspp_entitypermissions?$select=mspp_entitypermissionid,mspp_entityname` +
-        `&$filter=mspp_name eq ${odataQuote(name)} and _mspp_websiteid_value eq ${website.mspp_websiteid}` +
+        `&$filter=${permNameAttr} eq ${odataQuote(name)} and _mspp_websiteid_value eq ${website.mspp_websiteid}` +
         `&$expand=${PERMISSION_WEBROLE_NAV}($select=mspp_webroleid)`
     );
     const permission = result.value[0];
@@ -287,14 +293,14 @@ async function verifyPortal() {
 
   // NEGATIVE assertions (spec D1): internal notes and annotations must be hard-invisible.
   const forbiddenPermissions = await api(
-    `mspp_entitypermissions?$select=mspp_entitypermissionid,mspp_name` +
+    `mspp_entitypermissions?$select=mspp_entitypermissionid,${permNameAttr}` +
       `&$filter=mspp_entityname eq ${odataQuote('gd_internalnote')} or mspp_entityname eq ${odataQuote('annotation')}`
   );
   check(
     'portal',
     'ZERO table permissions for gd_internalnote / annotation',
     forbiddenPermissions.value.length === 0,
-    `found: ${forbiddenPermissions.value.map((p) => p.mspp_name).join(', ')}`
+    `found: ${forbiddenPermissions.value.map((p) => p[permNameAttr]).join(', ')}`
   );
 
   const forbiddenSettings = await api(

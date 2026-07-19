@@ -183,9 +183,22 @@ async function resolveAuthenticatedUsersRole(websiteId) {
 }
 
 /** Upsert one table permission (match by name + website); returns its id. */
+// mspp_entitypermission has NO mspp_name column (unlike mspp_website/webrole/
+// sitesetting) — its primary name attribute is resolved from metadata at runtime
+// (observed 2026-07-19: 'Could not find a property named mspp_name').
+let PERM_NAME_ATTR = 'mspp_name';
+
+async function resolvePermissionNameAttr() {
+  const def = await api(
+    "EntityDefinitions(LogicalName='mspp_entitypermission')?$select=PrimaryNameAttribute"
+  );
+  PERM_NAME_ATTR = def.PrimaryNameAttribute;
+  console.log(`mspp_entitypermission primary name attribute: ${PERM_NAME_ATTR}`);
+}
+
 async function upsertPermission(def, website, permissionIdsByName) {
   const payload = {
-    mspp_name: def.name,
+    [PERM_NAME_ATTR]: def.name,
     mspp_entityname: def.entity,
     mspp_scope: def.scope,
     mspp_read: !!def.read,
@@ -206,7 +219,7 @@ async function upsertPermission(def, website, permissionIdsByName) {
 
   const existing = await api(
     `mspp_entitypermissions?$select=mspp_entitypermissionid` +
-      `&$filter=mspp_name eq ${odataQuote(def.name)} and _mspp_websiteid_value eq ${website.mspp_websiteid}`
+      `&$filter=${PERM_NAME_ATTR} eq ${odataQuote(def.name)} and _mspp_websiteid_value eq ${website.mspp_websiteid}`
   );
 
   let id;
@@ -278,6 +291,7 @@ async function main() {
 
   const website = await resolveWebsite();
   const role = await resolveAuthenticatedUsersRole(website.mspp_websiteid);
+  await resolvePermissionNameAttr();
 
   console.log('\n--- Table permissions ---');
   const permissionIdsByName = new Map();
