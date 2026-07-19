@@ -59,10 +59,12 @@ jobs:
 
       # Flags verified against Microsoft Learn (pac auth reference): SPN profile via
       # --applicationId / --clientSecret / --tenant, targeted at --environment (URL works).
+      # actions-install puts pac in a temp dir and only exports POWERPLATFORMTOOLS_PACPATH
+      # (it is NOT on PATH for raw shell steps), so invoke it via that variable.
       - name: Authenticate pac as the service principal
         shell: pwsh
         run: |
-          pac auth create --applicationId $env:POWERPLATFORM_CLIENT_ID --clientSecret $env:POWERPLATFORM_CLIENT_SECRET --tenant $env:POWERPLATFORM_TENANT_ID --environment $env:DATAVERSE_URL
+          & $env:POWERPLATFORMTOOLS_PACPATH auth create --applicationId $env:POWERPLATFORM_CLIENT_ID --clientSecret $env:POWERPLATFORM_CLIENT_SECRET --tenant $env:POWERPLATFORM_TENANT_ID --environment $env:DATAVERSE_URL
 
       # Flags verified against Microsoft Learn (create-code-sites): --rootPath points at the
       # site folder; portal/powerpages.config.json supplies compiledPath (./dist) and the
@@ -71,4 +73,4 @@ jobs:
       - name: Upload code site
         shell: pwsh
         run: |
-          pac pages upload-code-site --rootPath portal --siteName "VelOps Support"
+          & $env:POWERPLATFORMTOOLS_PACPATH pages upload-code-site --rootPath portal --siteName "VelOps Support"
