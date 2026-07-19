@@ -25,8 +25,21 @@ import { api, fail, whoami, odataQuote } from "./lib/dataverse.mjs";
 const SITE_ID = "5fece082-7a65-4d32-8996-8e7b23153bd3";
 const HOME_CONTENT_PAGE_ID = "45436da8-05da-4408-9eb3-b279faeae540"; // pac manifest id (3rd failed update)
 
+// NOTE: a by-id GET on a missing virtual row returns HTTP 500 ("Value cannot be
+// null. Parameter name: entityMetadata"), not 404 — existence checks must use
+// $filter queries, which return an empty set instead.
+async function findWebTemplate(id) {
+  const { value } = await api(`mspp_webtemplates?$select=mspp_webtemplateid,mspp_name&$filter=mspp_webtemplateid eq ${id}`);
+  return value[0] ?? null;
+}
+
+async function findWebPage(id) {
+  const { value } = await api(`mspp_webpages?$select=mspp_webpageid,mspp_name,mspp_isroot&$filter=mspp_webpageid eq ${id}`);
+  return value[0] ?? null;
+}
+
 async function ensureWebTemplate(name, pinnedId, source) {
-  const existing = await api(`mspp_webtemplates(${pinnedId})?$select=mspp_webtemplateid,mspp_name`, { allow404: true });
+  const existing = await findWebTemplate(pinnedId);
   if (existing) {
     console.error(`  web template '${name}' already exists at ${pinnedId} — leaving as-is`);
     return pinnedId;
@@ -90,10 +103,7 @@ async function main() {
   const footerId = await ensureWebTemplate("Footer", footerRef, "<div/>");
 
   // 3. Home content page (isroot=false) carrying the SPA shell as its copy.
-  const existingContent = await api(
-    `mspp_webpages(${HOME_CONTENT_PAGE_ID})?$select=mspp_webpageid,mspp_name`,
-    { allow404: true },
-  );
+  const existingContent = await findWebPage(HOME_CONTENT_PAGE_ID);
   let homeContentId = HOME_CONTENT_PAGE_ID;
   if (existingContent) {
     console.error(`  Home content page already exists at ${HOME_CONTENT_PAGE_ID} — updating copy`);
@@ -139,9 +149,9 @@ async function main() {
   }
 
   // 4. Verify everything resolves now.
-  const verifyHeader = await api(`mspp_webtemplates(${headerRef})?$select=mspp_name`, { allow404: true });
-  const verifyFooter = await api(`mspp_webtemplates(${footerRef})?$select=mspp_name`, { allow404: true });
-  const verifyHome = await api(`mspp_webpages(${homeContentId})?$select=mspp_name,mspp_isroot`, { allow404: true });
+  const verifyHeader = await findWebTemplate(headerRef);
+  const verifyFooter = await findWebTemplate(footerRef);
+  const verifyHome = await findWebPage(homeContentId);
   const result = {
     header_resolves: !!verifyHeader,
     footer_resolves: !!verifyFooter,
