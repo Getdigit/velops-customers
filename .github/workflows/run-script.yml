@@ -1,0 +1,42 @@
+name: Run Ops Script
+
+# Runs one of the Node ops scripts in scripts/ against the Dataverse environment
+# with the SPN — for one-off maintenance that has no dedicated workflow (e.g.
+# scripts/delete-portal-sites.mjs). Same env contract as configure-portal.yml.
+
+on:
+  workflow_dispatch:
+    inputs:
+      script:
+        description: 'Repo-relative path of the script to run (e.g. scripts/delete-portal-sites.mjs)'
+        required: true
+        type: string
+      target-environment:
+        description: 'Environment URL override (leave empty to use repo variable DATAVERSE_URL)'
+        required: false
+        type: string
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      # vars.DATAVERSE_URL: repo VARIABLE — environment URL (RUNBOOK stap ①).
+      DATAVERSE_URL: ${{ inputs.target-environment || vars.DATAVERSE_URL }}
+      # The three SPN repo SECRETS (RUNBOOK stap ③).
+      POWERPLATFORM_CLIENT_ID: ${{ secrets.POWERPLATFORM_CLIENT_ID }}
+      POWERPLATFORM_CLIENT_SECRET: ${{ secrets.POWERPLATFORM_CLIENT_SECRET }}
+      POWERPLATFORM_TENANT_ID: ${{ secrets.POWERPLATFORM_TENANT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Only scripts inside scripts/ are allowed — this is an ops hatch, not a shell.
+      - name: Run script
+        run: |
+          case "${{ inputs.script }}" in
+            scripts/*.mjs) node "${{ inputs.script }}" ;;
+            *) echo "Refusing to run '${{ inputs.script }}' — only scripts/*.mjs are allowed"; exit 1 ;;
+          esac
