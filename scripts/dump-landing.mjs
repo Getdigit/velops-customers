@@ -4,10 +4,24 @@
 
 const PORTAL_URL = (process.env.PORTAL_URL || "https://velopssupport.powerappsportals.com").replace(/\/+$/, "");
 
-const res = await fetch(`${PORTAL_URL}/`, {
-  redirect: "follow",
-  headers: { "User-Agent": "velops-smoke/1.0 (+github-actions)" },
-});
+async function fetchWithRetry(url, attempts = 4) {
+  let lastErr;
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      return await fetch(url, {
+        redirect: "follow",
+        headers: { "User-Agent": "velops-smoke/1.0 (+github-actions)" },
+      });
+    } catch (err) {
+      lastErr = err;
+      console.error(`fetch attempt ${i}/${attempts} failed: ${err?.cause?.code || err?.message || err}`);
+      if (i < attempts) await new Promise((r) => setTimeout(r, 10000));
+    }
+  }
+  throw new Error(`fetch failed after ${attempts} attempts: ${lastErr?.cause?.code || lastErr?.message}`);
+}
+
+const res = await fetchWithRetry(`${PORTAL_URL}/`);
 const html = await res.text();
 
 console.log(`status: ${res.status}  final-url: ${res.url}  length: ${html.length}`);
