@@ -34,9 +34,10 @@ async function get(path, { redirect = "follow" } = {}) {
 // A request that lands on (or redirects to) a sign-in page — the portal's own
 // /Account/Login or the Entra login of a Private-visibility site — counts as
 // "access refused" for anonymous checks.
+const AUTH_GATE_RE = /login\.microsoftonline\.com|login\.windows\.net|\/Account\/Login/i;
 const isAuthGate = (r) =>
-  /login\.microsoftonline\.com|\/Account\/Login/i.test(r.url || "") ||
-  /login\.microsoftonline\.com|\/Account\/Login/i.test(r.location || "") ||
+  AUTH_GATE_RE.test(r.url || "") ||
+  AUTH_GATE_RE.test(r.location || "") ||
   /Sign in to your account/i.test(r.text || "");
 
 async function main() {
