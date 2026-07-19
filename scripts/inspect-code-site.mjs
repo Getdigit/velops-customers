@@ -26,6 +26,14 @@ const spaMarkers = (source) => ({
 async function main() {
   await whoami();
 
+  const { value: storageSites } = await api(
+    "powerpagesites?$select=powerpagesiteid,name,createdon&$orderby=createdon asc",
+  );
+  console.error(`powerpagesite rows: ${storageSites.length}`);
+  for (const s of storageSites) {
+    console.error(`  - ${s.name}  (${s.powerpagesiteid}, created ${s.createdon})`);
+  }
+
   const { value: websites } = await api(
     "mspp_websites?$select=mspp_websiteid,mspp_name",
   );
@@ -35,30 +43,30 @@ async function main() {
     console.error(`\n=== ${site.mspp_name} (${site.mspp_websiteid}) ===`);
 
     const { value: templates } = await api(
-      `mspp_webtemplates?$select=mspp_webtemplateid,mspp_name,mspp_source,modifiedon&$filter=_mspp_websiteid_value eq ${site.mspp_websiteid}`,
+      `mspp_webtemplates?$select=mspp_webtemplateid,mspp_name,mspp_source&$filter=_mspp_websiteid_value eq ${site.mspp_websiteid}`,
     );
     console.error(`web templates: ${templates.length}`);
     for (const t of templates) {
       const m = spaMarkers(t.mspp_source);
       console.error(
-        `  - ${t.mspp_name}  (${t.mspp_webtemplateid})  modified ${t.modifiedon}  len=${m.length}  root=${m.root}  bundle=${m.bundle}`,
+        `  - ${t.mspp_name}  (${t.mspp_webtemplateid})  len=${m.length}  root=${m.root}  bundle=${m.bundle}`,
       );
     }
 
     const { value: pages } = await api(
-      `mspp_webpages?$select=mspp_webpageid,mspp_name,mspp_isroot,modifiedon&$filter=_mspp_websiteid_value eq ${site.mspp_websiteid}&$orderby=mspp_name asc`,
+      `mspp_webpages?$select=mspp_webpageid,mspp_name,mspp_isroot&$filter=_mspp_websiteid_value eq ${site.mspp_websiteid}&$orderby=mspp_name asc`,
     );
     console.error(`webpages: ${pages.length}`);
     for (const p of pages) {
-      console.error(`  - ${p.mspp_name}  root=${p.mspp_isroot}  modified ${p.modifiedon}`);
+      console.error(`  - ${p.mspp_name}  root=${p.mspp_isroot}`);
     }
 
     const { value: files } = await api(
-      `mspp_webfiles?$select=mspp_webfileid,mspp_name,modifiedon&$filter=_mspp_websiteid_value eq ${site.mspp_websiteid}&$orderby=mspp_name asc`,
+      `mspp_webfiles?$select=mspp_webfileid,mspp_name&$filter=_mspp_websiteid_value eq ${site.mspp_websiteid}&$orderby=mspp_name asc`,
     );
     console.error(`webfiles: ${files.length}`);
     for (const f of files) {
-      console.error(`  - ${f.mspp_name}  modified ${f.modifiedon}`);
+      console.error(`  - ${f.mspp_name}`);
     }
   }
 
