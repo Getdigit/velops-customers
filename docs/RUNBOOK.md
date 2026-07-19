@@ -20,13 +20,16 @@ Daarna is alles herhaalbaar via de workflows (zie [README](../README.md)).
 - **Security-nazorg:** het SPN-client-secret en een Anthropic-key zijn tijdens de setup door
   een chatsessie gegaan — roteer beide op een rustig moment (nieuw client secret → repo-secret
   `POWERPLATFORM_CLIENT_SECRET` updaten; nieuwe Anthropic-key → alleen in de Function App-settings).
-- **Geleerde les 2 — duplicate sites:** elke mislukte `upload-code-site`-run maakte een NIEUWE
-  inactieve site aan. **Sanering (2 min):** open de portal-URL hierboven; laadt die de VelOps
-  Support-app, verwijder dan in Power Pages home alle "VelOps Support"-kaarten behalve de
-  actieve. Toont de URL een lege/foutpagina, deactiveer dan die site, activeer de nieuwste
-  "VelOps Support"-kaart en verwijder de rest (opnieuw configureren is niet nodig — de config
-  staat op alle benoemde site-rijen; `scripts/list-portal-sites.mjs` via de workflow
-  **Run Ops Script** toont de actuele stand).
+- **Geleerde les 2 — duplicate sites + VERPLICHTE saneringsstap:** elke mislukte
+  `upload-code-site`-run maakte een NIEUWE inactieve site aan. De smoke-test van 19-07 toont
+  dat de destijds geactiveerde site (site-kgbyt) de **lege shell** van een mislukte upload is:
+  hij serveert HTTP 500 en `/_api` geeft 404. **Fix (2 min):** Power Pages home → verwijder de
+  actieve kapotte site → activeer één van de twee complete **"VelOps Support"**-kaarten
+  (beide bevatten de volledige bundle én de portaalconfig — welke maakt niet uit) → verwijder
+  de overgebleven duplicaat-kaart. De site-URL VERANDERT hierdoor; gebruik de nieuwe URL in
+  stap ⑤ (`-AllowedOrigins`) en meld hem in de chat zodat de HTTP-smoke-test opnieuw kan
+  draaien (`scripts/smoke-portal-http.mjs` via **Run Ops Script**, met env `PORTAL_URL` of
+  aangepaste default). Opnieuw configureren is niet nodig.
 
 ## ① Environment-URL opzoeken → repo-variabele `DATAVERSE_URL`
 
