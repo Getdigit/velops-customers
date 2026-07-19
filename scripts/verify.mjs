@@ -276,15 +276,18 @@ async function verifyPortal() {
     for (const { label: name, entity } of EXPECTED_PERMISSIONS) {
       const result = await api(
         `mspp_entitypermissions?$select=mspp_entitypermissionid,mspp_entityname` +
-          `&$filter=mspp_entityname eq ${odataQuote(entity)} and _mspp_websiteid_value eq ${website.mspp_websiteid}` +
-          `&$expand=${PERMISSION_WEBROLE_NAV}($select=mspp_webroleid)`
+          `&$filter=mspp_entityname eq ${odataQuote(entity)} and _mspp_websiteid_value eq ${website.mspp_websiteid}`
       );
       const permission = result.value[0];
       check('portal', `table permission '${name}' exists${tag}`, !!permission);
       if (permission && authRole) {
-        const linked = (permission[PERMISSION_WEBROLE_NAV] || []).some(
-          (r) => r.mspp_webroleid === authRole.mspp_webroleid
+        // $expand on this virtual N:N silently returns nothing — read the
+        // association via direct navigation instead (same call the configure
+        // script uses).
+        const linkedResult = await api(
+          `mspp_entitypermissions(${permission.mspp_entitypermissionid})/${PERMISSION_WEBROLE_NAV}?$select=mspp_webroleid`
         );
+        const linked = linkedResult.value.some((r) => r.mspp_webroleid === authRole.mspp_webroleid);
         check('portal', `table permission '${name}' linked to Authenticated Users${tag}`, linked);
       }
     }
