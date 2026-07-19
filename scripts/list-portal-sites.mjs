@@ -19,8 +19,9 @@ async function main() {
   console.error(`powerpagesite rows: ${pps.length}`);
   for (const s of pps) console.error(`  - ${s.powerpagesiteid}  created ${s.createdon}`);
 
+  // NB: the virtual mspp_website entity has no createdon column.
   const { value: sites } = await api(
-    "mspp_websites?$select=mspp_websiteid,mspp_name,mspp_primarydomainname,createdon&$orderby=createdon asc",
+    "mspp_websites?$select=mspp_websiteid,mspp_name,mspp_primarydomainname",
   );
   const report = [];
   for (const w of sites) {
@@ -28,7 +29,6 @@ async function main() {
       id: w.mspp_websiteid,
       name: w.mspp_name,
       primarydomain: w.mspp_primarydomainname ?? null,
-      createdon: w.createdon,
       webfiles: await count(
         `mspp_webfiles?$select=mspp_webfileid&$filter=_mspp_websiteid_value eq ${w.mspp_websiteid}`,
       ),
