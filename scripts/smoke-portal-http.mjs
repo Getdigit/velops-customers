@@ -8,7 +8,7 @@
 //   5. gd_internalnotes is never readable (spec D1, from the outside).
 // Usage (CI): node scripts/smoke-portal-http.mjs   [PORTAL_URL=https://...]
 
-const PORTAL_URL = (process.env.PORTAL_URL || "https://site-kgbyt.powerappsportals.com").replace(/\/+$/, "");
+const PORTAL_URL = (process.env.PORTAL_URL || "https://velopssupport.powerappsportals.com").replace(/\/+$/, "");
 
 const failures = [];
 let passed = 0;

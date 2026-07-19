@@ -7,7 +7,7 @@ Daarna is alles herhaalbaar via de workflows (zie [README](../README.md)).
 
 - ①–④ zijn **uitgevoerd**: env-URL `https://velops-customer.crm4.dynamics.com`, SPN + secrets
   staan, solution geïmporteerd (verify groen incl. smoke-ticket `VEL-01001`), portal geüpload,
-  site geactiveerd op **`https://site-kgbyt.powerappsportals.com`**, configure-portal **groen**
+  site geactiveerd op **`https://velopssupport.powerappsportals.com`**, configure-portal **groen**
   (7 table permissions gelinkt aan Authenticated Users, 15 site settings, D1-negatief-asserts —
   op beide benoemde site-rijen). NB: de rol-koppeling loopt via de `powerpagecomponent`
   self-N:N; de virtuele `mspp_entitypermission_webrole`-relatie accepteert associates maar
@@ -90,7 +90,7 @@ zodat de bundle `AI_PROXY_URL`/key meeneemt.
 Volledige details in [ai-proxy/README.md](../ai-proxy/README.md); kort:
 
 - [ ] Lokaal: `az login` (juiste subscription) → `cd ai-proxy` →
-      `./deploy.ps1 -AllowedOrigins https://site-kgbyt.powerappsportals.com`.
+      `./deploy.ps1 -AllowedOrigins https://velopssupport.powerappsportals.com`.
 - [ ] Zet de Anthropic-key (nooit committen):
       `az functionapp config appsettings set -n velops-customer-ai -g velops-customer-ai-rg --settings ANTHROPIC_API_KEY="<key>"`.
 - [ ] Maak een **aparte, roteerbare function key** aan (bv. `portal`) en check CORS —
