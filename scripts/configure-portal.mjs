@@ -144,9 +144,9 @@ function assertNoForbiddenExposure() {
   }
 }
 
-async function resolveWebsite() {
+async function resolveWebsites() {
   const result = await api(
-    'mspp_websites?$select=mspp_websiteid,mspp_name,mspp_primarydomainname',
+    'mspp_websites?$select=mspp_websiteid,mspp_name',
     { allow404: true }
   );
   if (!result || result.value.length === 0) {
@@ -157,21 +157,20 @@ async function resolveWebsite() {
         '(A 404 on mspp_websites means the enhanced-data-model tables are not provisioned at all.)'
     );
   }
-  // The ACTIVATED site carries a primary domain; stale duplicate shells from
-  // failed uploads do not. Always configure the activated one.
-  const activated = result.value.filter((w) => w.mspp_primarydomainname);
-  if (result.value.length > 1) {
+  // Broken shells from failed uploads can have a null name — skip those, keep
+  // every named site (see the note in main()).
+  const named = result.value.filter((w) => w.mspp_name);
+  if (named.length === 0) {
+    fail('Only unnamed (broken) mspp_website rows found — re-run deploy-portal first.');
+  }
+  if (named.length > 1) {
     console.log(
-      `WARNING: ${result.value.length} mspp_website rows found ` +
-        `(${activated.length} with a primary domain). Configuring the activated one; ` +
-        'delete the stale duplicates when convenient.'
+      `WARNING: ${named.length} named mspp_website rows found — configuring ALL of them. ` +
+        'Delete the stale duplicate sites when convenient (Power Pages home).'
     );
   }
-  const website = activated[0] ?? result.value[0];
-  console.log(
-    `Website: '${website.mspp_name}' (${website.mspp_websiteid}, domain ${website.mspp_primarydomainname || 'none'})`
-  );
-  return website;
+  for (const w of named) console.log(`Website: '${w.mspp_name}' (${w.mspp_websiteid})`);
+  return named;
 }
 
 async function resolveAuthenticatedUsersRole(websiteId) {
@@ -288,20 +287,29 @@ async function main() {
   assertNoForbiddenExposure();
   await whoami();
 
-  const website = await resolveWebsite();
-  const role = await resolveAuthenticatedUsersRole(website.mspp_websiteid);
+  // When stale duplicate site rows exist (failed uploads created one site per
+  // run and the activation state is not readable from Dataverse — 2026-07-19:
+  // mspp_primarydomainname stays null even on the activated site), configure
+  // EVERY named site row. The activated one is then guaranteed to be covered;
+  // stale shells receive harmless config and get deleted during cleanup.
+  const websites = await resolveWebsites();
 
-  console.log('\n--- Table permissions ---');
-  const permissionIdsByName = new Map();
-  for (const def of PERMISSIONS) {
-    const id = await upsertPermission(def, website, permissionIdsByName);
-    permissionIdsByName.set(def.name, id);
-    await ensureRoleAssociation(id, def.name, role);
-  }
+  for (const website of websites) {
+    console.log(`\n=== Configuring '${website.mspp_name}' (${website.mspp_websiteid}) ===`);
+    const role = await resolveAuthenticatedUsersRole(website.mspp_websiteid);
 
-  console.log('\n--- Site settings ---');
-  for (const setting of buildSiteSettings()) {
-    await upsertSiteSetting(setting, website);
+    console.log('--- Table permissions ---');
+    const permissionIdsByName = new Map();
+    for (const def of PERMISSIONS) {
+      const id = await upsertPermission(def, website, permissionIdsByName);
+      permissionIdsByName.set(def.name, id);
+      await ensureRoleAssociation(id, def.name, role);
+    }
+
+    console.log('--- Site settings ---');
+    for (const setting of buildSiteSettings()) {
+      await upsertSiteSetting(setting, website);
+    }
   }
 
   console.log('\nconfigure-portal: done. Run `node scripts/verify.mjs` (VERIFY_SCOPE=portal) to assert.');

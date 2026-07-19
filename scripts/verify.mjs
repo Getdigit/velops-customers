@@ -246,54 +246,56 @@ async function verifyPortal() {
   console.error('\n== portal ==');
 
   const sites = await api(
-    'mspp_websites?$select=mspp_websiteid,mspp_name,mspp_primarydomainname',
+    'mspp_websites?$select=mspp_websiteid,mspp_name',
     { allow404: true }
   );
-  const websiteOk = !!sites && sites.value.length >= 1;
+  const named = sites ? sites.value.filter((w) => w.mspp_name) : [];
+  const websiteOk = named.length >= 1;
   check(
     'portal',
-    'mspp_website row exists (site created + activated)',
+    'named mspp_website row exists (site created + activated)',
     websiteOk,
-    sites ? `got ${sites.value.length} rows` : 'mspp_websites not found (enhanced data model missing)'
+    sites ? `got ${sites.value.length} rows (${named.length} named)` : 'mspp_websites not found (enhanced data model missing)'
   );
-  if (!websiteOk) return; // everything below needs the site
+  if (!websiteOk) return; // everything below needs a site
 
-  // The ACTIVATED site is the row with a primary domain; stale duplicate shells
-  // from failed uploads have none. Same selection rule as configure-portal.mjs.
-  const website = sites.value.find((w) => w.mspp_primarydomainname) ?? sites.value[0];
-  console.error(
-    `  using website '${website.mspp_name}' (${website.mspp_websiteid}, domain ${website.mspp_primarydomainname || 'none'})`
-  );
+  // Activation state is not readable from Dataverse, so configure-portal covers
+  // ALL named site rows — verify every one of them the same way. Stale duplicate
+  // shells disappear once cleaned up (see RUNBOOK).
+  for (const website of named) {
+    const tag = named.length > 1 ? ` [${website.mspp_websiteid.slice(0, 8)}]` : '';
+    console.error(`  verifying website '${website.mspp_name}' (${website.mspp_websiteid})`);
 
-  const rolesResult = await api(
-    `mspp_webroles?$select=mspp_webroleid,mspp_name` +
-      `&$filter=mspp_authenticatedusersrole eq true and _mspp_websiteid_value eq ${website.mspp_websiteid}`
-  );
-  const authRole = rolesResult.value[0];
-  check('portal', "built-in 'Authenticated Users' web role exists", !!authRole);
-
-  for (const { label: name, entity } of EXPECTED_PERMISSIONS) {
-    const result = await api(
-      `mspp_entitypermissions?$select=mspp_entitypermissionid,mspp_entityname` +
-        `&$filter=mspp_entityname eq ${odataQuote(entity)} and _mspp_websiteid_value eq ${website.mspp_websiteid}` +
-        `&$expand=${PERMISSION_WEBROLE_NAV}($select=mspp_webroleid)`
+    const rolesResult = await api(
+      `mspp_webroles?$select=mspp_webroleid,mspp_name` +
+        `&$filter=mspp_authenticatedusersrole eq true and _mspp_websiteid_value eq ${website.mspp_websiteid}`
     );
-    const permission = result.value[0];
-    check('portal', `table permission '${name}' exists`, !!permission);
-    if (permission && authRole) {
-      const linked = (permission[PERMISSION_WEBROLE_NAV] || []).some(
-        (r) => r.mspp_webroleid === authRole.mspp_webroleid
+    const authRole = rolesResult.value[0];
+    check('portal', `built-in 'Authenticated Users' web role exists${tag}`, !!authRole);
+
+    for (const { label: name, entity } of EXPECTED_PERMISSIONS) {
+      const result = await api(
+        `mspp_entitypermissions?$select=mspp_entitypermissionid,mspp_entityname` +
+          `&$filter=mspp_entityname eq ${odataQuote(entity)} and _mspp_websiteid_value eq ${website.mspp_websiteid}` +
+          `&$expand=${PERMISSION_WEBROLE_NAV}($select=mspp_webroleid)`
       );
-      check('portal', `table permission '${name}' linked to Authenticated Users`, linked);
+      const permission = result.value[0];
+      check('portal', `table permission '${name}' exists${tag}`, !!permission);
+      if (permission && authRole) {
+        const linked = (permission[PERMISSION_WEBROLE_NAV] || []).some(
+          (r) => r.mspp_webroleid === authRole.mspp_webroleid
+        );
+        check('portal', `table permission '${name}' linked to Authenticated Users${tag}`, linked);
+      }
     }
-  }
 
-  for (const name of expectedSiteSettingNames()) {
-    const result = await api(
-      `mspp_sitesettings?$select=mspp_sitesettingid,mspp_value` +
-        `&$filter=mspp_name eq ${odataQuote(name)} and _mspp_websiteid_value eq ${website.mspp_websiteid}`
-    );
-    check('portal', `site setting '${name}' present`, result.value.length >= 1);
+    for (const name of expectedSiteSettingNames()) {
+      const result = await api(
+        `mspp_sitesettings?$select=mspp_sitesettingid,mspp_value` +
+          `&$filter=mspp_name eq ${odataQuote(name)} and _mspp_websiteid_value eq ${website.mspp_websiteid}`
+      );
+      check('portal', `site setting '${name}' present${tag}`, result.value.length >= 1);
+    }
   }
 
   // NEGATIVE assertions (spec D1): internal notes and annotations must be hard-invisible.
