@@ -145,7 +145,10 @@ function assertNoForbiddenExposure() {
 }
 
 async function resolveWebsite() {
-  const result = await api('mspp_websites?$select=mspp_websiteid,mspp_name', { allow404: true });
+  const result = await api(
+    'mspp_websites?$select=mspp_websiteid,mspp_name,mspp_primarydomainname',
+    { allow404: true }
+  );
   if (!result || result.value.length === 0) {
     fail(
       'No mspp_website row found — the Power Pages site does not exist (or is not activated) yet.\n' +
@@ -154,14 +157,20 @@ async function resolveWebsite() {
         '(A 404 on mspp_websites means the enhanced-data-model tables are not provisioned at all.)'
     );
   }
+  // The ACTIVATED site carries a primary domain; stale duplicate shells from
+  // failed uploads do not. Always configure the activated one.
+  const activated = result.value.filter((w) => w.mspp_primarydomainname);
   if (result.value.length > 1) {
     console.log(
-      `WARNING: ${result.value.length} mspp_website rows found — using the first ` +
-        `('${result.value[0].mspp_name}'). This environment is expected to host exactly one site.`
+      `WARNING: ${result.value.length} mspp_website rows found ` +
+        `(${activated.length} with a primary domain). Configuring the activated one; ` +
+        'delete the stale duplicates when convenient.'
     );
   }
-  const website = result.value[0];
-  console.log(`Website: '${website.mspp_name}' (${website.mspp_websiteid})`);
+  const website = activated[0] ?? result.value[0];
+  console.log(
+    `Website: '${website.mspp_name}' (${website.mspp_websiteid}, domain ${website.mspp_primarydomainname || 'none'})`
+  );
   return website;
 }
 
@@ -183,22 +192,12 @@ async function resolveAuthenticatedUsersRole(websiteId) {
 }
 
 /** Upsert one table permission (match by name + website); returns its id. */
-// mspp_entitypermission has NO mspp_name column (unlike mspp_website/webrole/
-// sitesetting) — its primary name attribute is resolved from metadata at runtime
-// (observed 2026-07-19: 'Could not find a property named mspp_name').
-let PERM_NAME_ATTR = 'mspp_name';
-
-async function resolvePermissionNameAttr() {
-  const def = await api(
-    "EntityDefinitions(LogicalName='mspp_entitypermission')?$select=PrimaryNameAttribute"
-  );
-  PERM_NAME_ATTR = def.PrimaryNameAttribute;
-  console.log(`mspp_entitypermission primary name attribute: ${PERM_NAME_ATTR}`);
-}
-
+// mspp_entitypermission has NO separate friendly-name column: its primary name
+// attribute IS mspp_entityname (observed 2026-07-19; a filter on mspp_name
+// returns 'Could not find a property'). Permissions are therefore identified by
+// entity logical name — unique per site in this configuration.
 async function upsertPermission(def, website, permissionIdsByName) {
   const payload = {
-    [PERM_NAME_ATTR]: def.name,
     mspp_entityname: def.entity,
     mspp_scope: def.scope,
     mspp_read: !!def.read,
@@ -219,7 +218,7 @@ async function upsertPermission(def, website, permissionIdsByName) {
 
   const existing = await api(
     `mspp_entitypermissions?$select=mspp_entitypermissionid` +
-      `&$filter=${PERM_NAME_ATTR} eq ${odataQuote(def.name)} and _mspp_websiteid_value eq ${website.mspp_websiteid}`
+      `&$filter=mspp_entityname eq ${odataQuote(def.entity)} and _mspp_websiteid_value eq ${website.mspp_websiteid}`
   );
 
   let id;
@@ -291,7 +290,6 @@ async function main() {
 
   const website = await resolveWebsite();
   const role = await resolveAuthenticatedUsersRole(website.mspp_websiteid);
-  await resolvePermissionNameAttr();
 
   console.log('\n--- Table permissions ---');
   const permissionIdsByName = new Map();

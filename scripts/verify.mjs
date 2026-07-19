@@ -203,15 +203,18 @@ async function verifyData() {
 // portal
 // ---------------------------------------------------------------------------------
 
-// Must stay in sync with scripts/configure-portal.mjs.
-const EXPECTED_PERMISSION_NAMES = [
-  'Ticket - account scope',
-  'Message - parent via ticket',
-  'Attachment - parent via ticket',
-  'Team apps - account scope',
-  'Apps - global',
-  'Contact - self',
-  'Account - own team',
+// Must stay in sync with scripts/configure-portal.mjs. mspp_entitypermission
+// has NO separate friendly-name column (its primary name attribute IS
+// mspp_entityname), so permissions are identified by entity logical name —
+// unique per site in our config.
+const EXPECTED_PERMISSIONS = [
+  { label: 'Ticket - account scope', entity: 'gd_supportticket' },
+  { label: 'Message - parent via ticket', entity: 'gd_supportmessage' },
+  { label: 'Attachment - parent via ticket', entity: 'gd_ticketattachment' },
+  { label: 'Team apps - account scope', entity: 'gd_accountapp' },
+  { label: 'Apps - global', entity: 'gd_app' },
+  { label: 'Contact - self', entity: 'contact' },
+  { label: 'Account - own team', entity: 'account' },
 ];
 
 const WEBAPI_TABLES = [
@@ -242,7 +245,10 @@ const PERMISSION_WEBROLE_NAV = 'mspp_entitypermission_webrole';
 async function verifyPortal() {
   console.error('\n== portal ==');
 
-  const sites = await api('mspp_websites?$select=mspp_websiteid,mspp_name', { allow404: true });
+  const sites = await api(
+    'mspp_websites?$select=mspp_websiteid,mspp_name,mspp_primarydomainname',
+    { allow404: true }
+  );
   const websiteOk = !!sites && sites.value.length >= 1;
   check(
     'portal',
@@ -252,7 +258,12 @@ async function verifyPortal() {
   );
   if (!websiteOk) return; // everything below needs the site
 
-  const website = sites.value[0];
+  // The ACTIVATED site is the row with a primary domain; stale duplicate shells
+  // from failed uploads have none. Same selection rule as configure-portal.mjs.
+  const website = sites.value.find((w) => w.mspp_primarydomainname) ?? sites.value[0];
+  console.error(
+    `  using website '${website.mspp_name}' (${website.mspp_websiteid}, domain ${website.mspp_primarydomainname || 'none'})`
+  );
 
   const rolesResult = await api(
     `mspp_webroles?$select=mspp_webroleid,mspp_name` +
@@ -261,16 +272,10 @@ async function verifyPortal() {
   const authRole = rolesResult.value[0];
   check('portal', "built-in 'Authenticated Users' web role exists", !!authRole);
 
-  // mspp_entitypermission has no mspp_name — resolve its primary name attribute
-  // from metadata (same workaround as configure-portal.mjs).
-  const permNameAttr = (
-    await api("EntityDefinitions(LogicalName='mspp_entitypermission')?$select=PrimaryNameAttribute")
-  ).PrimaryNameAttribute;
-
-  for (const name of EXPECTED_PERMISSION_NAMES) {
+  for (const { label: name, entity } of EXPECTED_PERMISSIONS) {
     const result = await api(
       `mspp_entitypermissions?$select=mspp_entitypermissionid,mspp_entityname` +
-        `&$filter=${permNameAttr} eq ${odataQuote(name)} and _mspp_websiteid_value eq ${website.mspp_websiteid}` +
+        `&$filter=mspp_entityname eq ${odataQuote(entity)} and _mspp_websiteid_value eq ${website.mspp_websiteid}` +
         `&$expand=${PERMISSION_WEBROLE_NAV}($select=mspp_webroleid)`
     );
     const permission = result.value[0];
@@ -293,14 +298,14 @@ async function verifyPortal() {
 
   // NEGATIVE assertions (spec D1): internal notes and annotations must be hard-invisible.
   const forbiddenPermissions = await api(
-    `mspp_entitypermissions?$select=mspp_entitypermissionid,${permNameAttr}` +
+    `mspp_entitypermissions?$select=mspp_entitypermissionid,mspp_entityname` +
       `&$filter=mspp_entityname eq ${odataQuote('gd_internalnote')} or mspp_entityname eq ${odataQuote('annotation')}`
   );
   check(
     'portal',
     'ZERO table permissions for gd_internalnote / annotation',
     forbiddenPermissions.value.length === 0,
-    `found: ${forbiddenPermissions.value.map((p) => p[permNameAttr]).join(', ')}`
+    `found: ${forbiddenPermissions.value.map((p) => p.mspp_entityname).join(', ')}`
   );
 
   const forbiddenSettings = await api(
