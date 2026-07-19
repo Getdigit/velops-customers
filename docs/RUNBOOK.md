@@ -7,7 +7,11 @@ Daarna is alles herhaalbaar via de workflows (zie [README](../README.md)).
 
 - ①–④ zijn **uitgevoerd**: env-URL `https://velops-customer.crm4.dynamics.com`, SPN + secrets
   staan, solution geïmporteerd (verify groen incl. smoke-ticket `VEL-01001`), portal geüpload,
-  site geactiveerd op **`https://site-kgbyt.powerappsportals.com`**, configure-portal gedraaid.
+  site geactiveerd op **`https://site-kgbyt.powerappsportals.com`**, configure-portal **groen**
+  (7 table permissions gelinkt aan Authenticated Users, 15 site settings, D1-negatief-asserts —
+  op beide benoemde site-rijen). NB: de rol-koppeling loopt via de `powerpagecomponent`
+  self-N:N; de virtuele `mspp_entitypermission_webrole`-relatie accepteert associates maar
+  bewaart ze niet (zie scripts/configure-portal.mjs).
 - **Nog te doen: ⑤ (AI-proxy) en ⑥ (smoketest)**, plus de sanering hieronder.
 - **Geleerde les 1 — js-blokkade:** Dataverse blokkeert `.js`-bijlagen standaard; daardoor faalde
   elke code-site-upload met `PortalFileContentUploadFailed`. Opgelost door `js` te verwijderen
