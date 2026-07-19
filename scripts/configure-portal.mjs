@@ -222,24 +222,14 @@ async function upsertPermission(def, website, permissionIdsByName) {
 
   let id;
   if (existing.value.length > 0) {
+    // The mspp_ virtual-entity provider rejects PATCHes on existing permission
+    // rows (HTTP 412 duplicate rule with identity fields, HTTP 400 'given key
+    // was not present' without them — observed 2026-07-19). Creation is
+    // authoritative: an existing row already carries the desired rights, so
+    // leave it untouched. If the permission DEFINITION ever changes, delete the
+    // row first and re-run this script.
     id = existing.value[0].mspp_entitypermissionid;
-    // PATCHing identity fields (entityname/websiteid) trips Dataverse's
-    // duplicate-detection on this virtual entity (HTTP 412, 2026-07-19) —
-    // update only the rights/scope/relationship fields, and treat a 412 as
-    // "already in the desired state".
-    const updatePayload = { ...payload };
-    delete updatePayload.mspp_entityname;
-    delete updatePayload['mspp_websiteid@odata.bind'];
-    try {
-      await api(`mspp_entitypermissions(${id})`, { method: 'PATCH', body: updatePayload });
-      console.log(`= permission updated  '${def.name}' (${id})`);
-    } catch (err) {
-      if (String(err?.message || err).includes('412')) {
-        console.log(`= permission exists   '${def.name}' (${id}) — PATCH rejected by duplicate rule, left as-is`);
-      } else {
-        throw err;
-      }
-    }
+    console.log(`= permission exists   '${def.name}' (${id}) — left as-is`);
   } else {
     const created = await api('mspp_entitypermissions', {
       method: 'POST',
