@@ -1,7 +1,28 @@
 # RUNBOOK — eenmalige handmatige stappen + smoke-checklists
 
 Alles wat CI **niet** kan doen staat hier. Stappen ① t/m ⑥ zijn eenmalig, in deze volgorde.
-Daarna is alles herhaalbaar via de vier workflows (zie [README](../README.md)).
+Daarna is alles herhaalbaar via de workflows (zie [README](../README.md)).
+
+## Stand van zaken (as-built, 19-07-2026)
+
+- ①–④ zijn **uitgevoerd**: env-URL `https://velops-customer.crm4.dynamics.com`, SPN + secrets
+  staan, solution geïmporteerd (verify groen incl. smoke-ticket `VEL-01001`), portal geüpload,
+  site geactiveerd op **`https://site-kgbyt.powerappsportals.com`**, configure-portal gedraaid.
+- **Nog te doen: ⑤ (AI-proxy) en ⑥ (smoketest)**, plus de sanering hieronder.
+- **Geleerde les 1 — js-blokkade:** Dataverse blokkeert `.js`-bijlagen standaard; daardoor faalde
+  elke code-site-upload met `PortalFileContentUploadFailed`. Opgelost door `js` te verwijderen
+  uit *Blocked attachments* (admin center → env → Settings → Privacy + Security). **Bij een
+  nieuwe omgeving: doe dit vóór de eerste deploy-portal-run.**
+- **Security-nazorg:** het SPN-client-secret en een Anthropic-key zijn tijdens de setup door
+  een chatsessie gegaan — roteer beide op een rustig moment (nieuw client secret → repo-secret
+  `POWERPLATFORM_CLIENT_SECRET` updaten; nieuwe Anthropic-key → alleen in de Function App-settings).
+- **Geleerde les 2 — duplicate sites:** elke mislukte `upload-code-site`-run maakte een NIEUWE
+  inactieve site aan. **Sanering (2 min):** open de portal-URL hierboven; laadt die de VelOps
+  Support-app, verwijder dan in Power Pages home alle "VelOps Support"-kaarten behalve de
+  actieve. Toont de URL een lege/foutpagina, deactiveer dan die site, activeer de nieuwste
+  "VelOps Support"-kaart en verwijder de rest (opnieuw configureren is niet nodig — de config
+  staat op alle benoemde site-rijen; `scripts/list-portal-sites.mjs` via de workflow
+  **Run Ops Script** toont de actuele stand).
 
 ## ① Environment-URL opzoeken → repo-variabele `DATAVERSE_URL`
 
@@ -62,7 +83,7 @@ zodat de bundle `AI_PROXY_URL`/key meeneemt.
 Volledige details in [ai-proxy/README.md](../ai-proxy/README.md); kort:
 
 - [ ] Lokaal: `az login` (juiste subscription) → `cd ai-proxy` →
-      `./deploy.ps1 -AllowedOrigins https://<site-url-uit-④>`.
+      `./deploy.ps1 -AllowedOrigins https://site-kgbyt.powerappsportals.com`.
 - [ ] Zet de Anthropic-key (nooit committen):
       `az functionapp config appsettings set -n velops-customer-ai -g velops-customer-ai-rg --settings ANTHROPIC_API_KEY="<key>"`.
 - [ ] Maak een **aparte, roteerbare function key** aan (bv. `portal`) en check CORS —
