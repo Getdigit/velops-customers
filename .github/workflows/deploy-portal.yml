@@ -9,13 +9,19 @@ run-name: Deploy portal (first upload creates an INACTIVE site — activate once
 
 on:
   workflow_dispatch:
+    inputs:
+      target-environment:
+        description: 'Environment URL override (leave empty to use repo variable DATAVERSE_URL)'
+        required: false
+        type: string
 
 jobs:
   deploy:
     runs-on: windows-latest
     env:
       # vars.DATAVERSE_URL: repo VARIABLE — environment URL of "VelOps Customer" (RUNBOOK stap ①).
-      DATAVERSE_URL: ${{ vars.DATAVERSE_URL }}
+      # The optional workflow input overrides it for a one-off run.
+      DATAVERSE_URL: ${{ inputs.target-environment || vars.DATAVERSE_URL }}
       # secrets.POWERPLATFORM_CLIENT_ID: repo SECRET — client id of the SPN app registration (RUNBOOK stap ②/③).
       POWERPLATFORM_CLIENT_ID: ${{ secrets.POWERPLATFORM_CLIENT_ID }}
       # secrets.POWERPLATFORM_CLIENT_SECRET: repo SECRET — client secret of that SPN (RUNBOOK stap ③).
