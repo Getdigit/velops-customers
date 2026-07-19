@@ -20,16 +20,27 @@ Daarna is alles herhaalbaar via de workflows (zie [README](../README.md)).
 - **Security-nazorg:** het SPN-client-secret en een Anthropic-key zijn tijdens de setup door
   een chatsessie gegaan — roteer beide op een rustig moment (nieuw client secret → repo-secret
   `POWERPLATFORM_CLIENT_SECRET` updaten; nieuwe Anthropic-key → alleen in de Function App-settings).
-- **Geleerde les 2 — duplicate sites + VERPLICHTE saneringsstap:** elke mislukte
-  `upload-code-site`-run maakte een NIEUWE inactieve site aan. De smoke-test van 19-07 toont
-  dat de destijds geactiveerde site (site-kgbyt) de **lege shell** van een mislukte upload is:
-  hij serveert HTTP 500 en `/_api` geeft 404. **Fix (2 min):** Power Pages home → verwijder de
-  actieve kapotte site → activeer één van de twee complete **"VelOps Support"**-kaarten
-  (beide bevatten de volledige bundle én de portaalconfig — welke maakt niet uit) → verwijder
-  de overgebleven duplicaat-kaart. De site-URL VERANDERT hierdoor; gebruik de nieuwe URL in
-  stap ⑤ (`-AllowedOrigins`) en meld hem in de chat zodat de HTTP-smoke-test opnieuw kan
-  draaien (`scripts/smoke-portal-http.mjs` via **Run Ops Script**, met env `PORTAL_URL` of
-  aangepaste default). Opnieuw configureren is niet nodig.
+- **Geleerde les 2 — duplicate sites:** elke `upload-code-site`-run maakte een NIEUWE
+  inactieve site aan in plaats van de bestaande te matchen (vier keer op rij, ook na
+  succesvolle uploads). Duplicaten zijn opgeruimd met `scripts/delete-portal-sites.mjs`
+  (id-gepind, via **Run Ops Script**); check de actuele stand met
+  `scripts/list-portal-sites.mjs`. **Na elke toekomstige deploy-portal-run:** eerst
+  list-portal-sites draaien; is er een nieuwe duplicaat-rij, dan heeft de LIVE site de
+  nieuwe bundle NIET gekregen (zie les 3).
+- **Geleerde les 3 — lege "Home" in plaats van de SPA (opgelost 19-07 ~20:00):** pac's
+  omgevings-manifest verwees de drie "speciale" records van een code site — de **Home
+  content-pagina** (waarvan `mspp_copy` de gecompileerde `index.html` IS), en de
+  **Header/Footer-webtemplates** (`<div/>`, om de platform-chrome te onderdrukken) — naar
+  component-ids van de allereerste (verwijderde) uploadsite. Elke upload "updatte" die drie
+  dus in het luchtledige (`Entity ... Does Not Exist`) en géén site kreeg ze ooit; de live
+  site rendert dan de lege standaard-Home. **Fix:** `scripts/repair-code-site.mjs` heeft de
+  drie records op de live site (5fece082) aangemaakt met exact de ids waar de site-rij en
+  pac's manifest al naar wezen (header `89c87355…`, footer `7c2c45dd…`, Home-content
+  `45436da8…`; Dataverse honoreert expliciete primary keys bij create). Structuur
+  geverifieerd tegen Microsofts `power-pages-samples` car-sales-website codesite-sample.
+  Sindsdien serveert <https://velopssupport.powerappsportals.com> de SPA. NB: een by-id GET
+  op een niet-bestaande virtuele mspp-rij geeft HTTP 500 (geen 404) — bestaan checken met
+  een `$filter`-query.
 
 ## ① Environment-URL opzoeken → repo-variabele `DATAVERSE_URL`
 
