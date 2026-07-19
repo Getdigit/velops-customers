@@ -20,13 +20,15 @@ Daarna is alles herhaalbaar via de workflows (zie [README](../README.md)).
 - **Security-nazorg:** het SPN-client-secret en een Anthropic-key zijn tijdens de setup door
   een chatsessie gegaan — roteer beide op een rustig moment (nieuw client secret → repo-secret
   `POWERPLATFORM_CLIENT_SECRET` updaten; nieuwe Anthropic-key → alleen in de Function App-settings).
-- **Geleerde les 2 — duplicate sites:** elke `upload-code-site`-run maakte een NIEUWE
-  inactieve site aan in plaats van de bestaande te matchen (vier keer op rij, ook na
-  succesvolle uploads). Duplicaten zijn opgeruimd met `scripts/delete-portal-sites.mjs`
-  (id-gepind, via **Run Ops Script**); check de actuele stand met
-  `scripts/list-portal-sites.mjs`. **Na elke toekomstige deploy-portal-run:** eerst
-  list-portal-sites draaien; is er een nieuwe duplicaat-rij, dan heeft de LIVE site de
-  nieuwe bundle NIET gekregen (zie les 3).
+- **Geleerde les 2 — deploy-portal maakt ALTIJD een nieuwe site aan:** elke
+  `upload-code-site`-run maakte een NIEUWE inactieve site aan in plaats van de bestaande
+  te matchen — vijf keer op rij, óók in een gecontroleerd experiment (20:21) met precies
+  één settelde site in de omgeving. De live site wordt door deploy-portal dus NIET
+  bijgewerkt. **Werkwijze:** draai deploy-portal alleen als een nieuwe bundle nodig is,
+  draai daarna `scripts/list-portal-sites.mjs` (Run Ops Script), en laat de verse
+  duplicaat-site via de chat/agent synchroniseren naar de live site (webfiles +
+  Home-copy) en opruimen met het id-gepinde `scripts/delete-portal-sites.mjs`. Zolang de
+  bundle niet wijzigt is er niets te doen: de live site blijft gewoon werken.
 - **Geleerde les 3 — lege "Home" in plaats van de SPA (opgelost 19-07 ~20:00):** pac's
   omgevings-manifest verwees de drie "speciale" records van een code site — de **Home
   content-pagina** (waarvan `mspp_copy` de gecompileerde `index.html` IS), en de
@@ -119,7 +121,10 @@ Volledige details in [ai-proxy/README.md](../ai-proxy/README.md); kort:
       zie ai-proxy/README.md, sectie "Function key".
 - [ ] Repo-variabele `AI_PROXY_URL` = `https://velops-customer-ai.azurewebsites.net/api/messages`;
       repo-secret `AI_PROXY_FUNCTION_KEY` = de nieuwe key (paden: zie stap ③).
-- [ ] Draai **deploy-portal** één keer opnieuw (bundle pikt de AI-config op).
+- [ ] Draai **deploy-portal** één keer opnieuw (bundle pikt de AI-config op) — LET OP
+      geleerde les 2: dit maakt een nieuwe duplicaat-site aan en werkt de live site NIET
+      bij. Meld je daarna in de chat zodat de nieuwe bundle naar de live site
+      gesynchroniseerd wordt en de duplicaat opgeruimd.
 
 ## ⑥ E2E-smoketest (na ①–⑤)
 

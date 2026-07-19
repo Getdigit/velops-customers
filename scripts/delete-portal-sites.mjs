@@ -20,9 +20,10 @@ async function main() {
   // Instead we pin the EXACT ids of the three duplicate shells observed in the
   // 2026-07-19 Run Ops Script log (one per failed upload-code-site run).
   const TARGET_IDS = [
-    // Third cleanup round (2026-07-19 ~20:00): the LIVE site is 5fece082 (bound
+    // Fourth cleanup round (2026-07-19 ~20:25): the LIVE site is 5fece082 (bound
     // to velopssupport.powerappsportals.com) — keep that one. Remove:
-    "e79ede10-4794-412e-bced-3cf2cb816fcf", // 19:31 deploy-portal duplicate (pac created a new site instead of matching)
+    "fe34876d-6e37-4d4e-ac8c-102672689d99", // 20:21 controlled-experiment duplicate: even with a single
+    // settled site pac creates a new one — upload-code-site never matches here (RUNBOOK lesson 2)
   ];
 
   const { value: sites } = await api(
