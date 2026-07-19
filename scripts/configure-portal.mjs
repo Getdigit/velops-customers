@@ -223,8 +223,23 @@ async function upsertPermission(def, website, permissionIdsByName) {
   let id;
   if (existing.value.length > 0) {
     id = existing.value[0].mspp_entitypermissionid;
-    await api(`mspp_entitypermissions(${id})`, { method: 'PATCH', body: payload });
-    console.log(`= permission updated  '${def.name}' (${id})`);
+    // PATCHing identity fields (entityname/websiteid) trips Dataverse's
+    // duplicate-detection on this virtual entity (HTTP 412, 2026-07-19) —
+    // update only the rights/scope/relationship fields, and treat a 412 as
+    // "already in the desired state".
+    const updatePayload = { ...payload };
+    delete updatePayload.mspp_entityname;
+    delete updatePayload['mspp_websiteid@odata.bind'];
+    try {
+      await api(`mspp_entitypermissions(${id})`, { method: 'PATCH', body: updatePayload });
+      console.log(`= permission updated  '${def.name}' (${id})`);
+    } catch (err) {
+      if (String(err?.message || err).includes('412')) {
+        console.log(`= permission exists   '${def.name}' (${id}) — PATCH rejected by duplicate rule, left as-is`);
+      } else {
+        throw err;
+      }
+    }
   } else {
     const created = await api('mspp_entitypermissions', {
       method: 'POST',
