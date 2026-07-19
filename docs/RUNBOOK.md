@@ -85,6 +85,17 @@ Nu kunnen **deploy-solution** en **deploy-portal** draaien (Actions → workflow
 `configure-portal`. `deploy-portal` hoeft hierna **niet** opnieuw — alleen één keer na stap ⑤,
 zodat de bundle `AI_PROXY_URL`/key meeneemt.
 
+## ④b Site visibility op Public zetten (eenmalig, na activatie)
+
+Nieuwe sites staan standaard op **Private**: alle bezoekers (ook anoniem) worden eerst door
+Entra-login gestuurd en klanten kunnen er dus niet in. Zichtbaar aan een
+"Sign in to your account"-scherm op de site-URL.
+
+- [ ] <https://make.powerpages.microsoft.com> → site **VelOps Support** → **Security** →
+      **Site visibility** → **Public** → bevestigen.
+- [ ] Check: de site-URL toont daarna de VelOps-landing zonder Microsoft-login;
+      `scripts/smoke-portal-http.mjs` (workflow **Run Ops Script**) hoort volledig groen te zijn.
+
 ## ⑤ AI-proxy: Function App `velops-customer-ai` deployen
 
 Volledige details in [ai-proxy/README.md](../ai-proxy/README.md); kort:
