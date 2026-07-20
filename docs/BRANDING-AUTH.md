@@ -4,22 +4,27 @@
 
 Het portaal is een Power Pages **code site**: wij leveren alleen de SPA-bundle
 (`portal/dist`). Inloggen en registreren zijn **platform-hosted pagina's** van Power
-Pages zelf — `/Account/Login` en `/Account/Login/Register` — gerenderd buiten onze
-bundle om. Een code site heeft geen Liquid/SSR-laag, dus er is **geen hook om CSS of
-markup in die pagina's te injecteren**.
+Pages zelf, gerenderd buiten onze bundle om. Er zijn twee families endpoints:
 
-## Wél / niet
+- **`/SignIn`** (modern, mét tabbladen Sign in / Register / Redeem invitation): laadt de
+  **site-webfiles** `bootstrap.min.css` + `portalbasictheme.css` + `theme.css` — en dus
+  ook onze VelOps-overrides in `portal/platform-theme/theme.css` (Saira, geel/inkt,
+  papier-achtergrond). **Dit is het endpoint dat de SPA gebruikt.**
+- **`/Account/Login`** (legacy): laadt géén site-css en rendert altijd kaal — niet naar
+  linken. (`/Account/Login/Register` en `/Account/Login/LogOff` komen wel goed terecht
+  in de gestylede flow.)
+
+## Wél / niet (bijgewerkt 20-07-2026)
 
 | | Kan | Kan niet |
 |---|---|---|
 | **Gedrag** | Registratie open/dicht, local login, redirect na login (`ReturnUrl`) — allemaal via **site settings** (zie onder) | — |
-| **Styling** | — | CSS/fonts/kleuren van `/Account/Login*` aanpassen vanuit de code site; eigen header/footer op die pagina's |
-| **Tekst** | Sitenaam die het platform toont = de site display name (**"VelOps Support"** — bewust zo gekozen, dit is ons enige "brandmoment" dáár) | Overige copy op de platform-pagina's |
-| **Flow** | Vanuit de SPA linken: **Sign in** → `/Account/Login?ReturnUrl=%2Ftickets`, **Create an account** → `/Account/Login/Register`; na login landt de gebruiker terug in de SPA | De pagina's overslaan of vervangen door een eigen loginform (auth blijft platform-hosted) |
+| **Styling** | `/SignIn` + registratie/profiel stylen via de **theme-webfiles** (`portal/platform-theme/theme.css`, uitgerold met `scripts/apply-platform-theme.mjs`) | Markup/structuur van de platform-pagina's wijzigen; het legacy `/Account/Login` stylen |
+| **Tekst** | Sitenaam die het platform toont = de site display name (**"VelOps Support"**) | Overige copy op de platform-pagina's |
+| **Flow** | Vanuit de SPA linken: **Sign in** → `/SignIn?ReturnUrl=%2Ftickets`, **Create an account** → `/Account/Login/Register`; na login landt de gebruiker terug in de SPA | De pagina's overslaan of vervangen door een eigen loginform (auth blijft platform-hosted) |
 
-**Conclusie / ontwerpkeuze:** de merk-momenten zijn de **gebrande landingpagina** (`/`) en
-alles **in de SPA** (tokens, Saira, mockup-CSS). De login/registratie-stap ertussen is een
-neutraal, herkenbaar Microsoft-moment van enkele seconden — dat accepteren we in v1.
+**Conclusie:** de merk-momenten zijn de gebrande landingpagina (`/`), alles in de SPA, én
+sinds 20-07 ook de sign-in/registratie-pagina's zelf (Saira + geel/inkt via theme.css).
 
 ## Gebruikte site settings (gezet door `scripts/configure-portal.mjs`)
 

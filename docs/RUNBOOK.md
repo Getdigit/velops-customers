@@ -20,15 +20,18 @@ Daarna is alles herhaalbaar via de workflows (zie [README](../README.md)).
 - **Security-nazorg:** het SPN-client-secret en een Anthropic-key zijn tijdens de setup door
   een chatsessie gegaan — roteer beide op een rustig moment (nieuw client secret → repo-secret
   `POWERPLATFORM_CLIENT_SECRET` updaten; nieuwe Anthropic-key → alleen in de Function App-settings).
-- **Geleerde les 2 — deploy-portal maakt ALTIJD een nieuwe site aan:** elke
-  `upload-code-site`-run maakte een NIEUWE inactieve site aan in plaats van de bestaande
-  te matchen — vijf keer op rij, óók in een gecontroleerd experiment (20:21) met precies
-  één settelde site in de omgeving. De live site wordt door deploy-portal dus NIET
-  bijgewerkt. **Werkwijze:** draai deploy-portal alleen als een nieuwe bundle nodig is,
-  draai daarna `scripts/list-portal-sites.mjs` (Run Ops Script), en laat de verse
-  duplicaat-site via de chat/agent synchroniseren naar de live site (webfiles +
-  Home-copy) en opruimen met het id-gepinde `scripts/delete-portal-sites.mjs`. Zolang de
-  bundle niet wijzigt is er niets te doen: de live site blijft gewoon werken.
+- **Geleerde les 2 — deploy-portal maakt ALTIJD een nieuwe site aan; gebruik
+  sync-spa-bundle:** elke `upload-code-site`-run maakte een NIEUWE inactieve site aan in
+  plaats van de bestaande te matchen — vijf keer op rij, óók in een gecontroleerd
+  experiment (20:21) met precies één settelde site in de omgeving. **Een nieuwe
+  SPA-bundle uitrollen doe je daarom NIET met deploy-portal maar met Run Ops Script →
+  `scripts/sync-spa-bundle.mjs`** (bewezen werkend 20-07): bouwt de SPA op de runner
+  (met `AI_PROXY_URL`/key uit de repo-config zodra die bestaan, stap ⑤) en zet de bundle
+  rechtstreeks op de live site — webfiles upserten, verouderde hash-bundels opruimen,
+  Home-contentpagina verversen, met readback-verificatie. Ontstaat er ooit tóch een
+  duplicaat-site (bv. door een onbedoelde deploy-portal-run): opruimen met het
+  id-gepinde `scripts/delete-portal-sites.mjs`; stand checken met
+  `scripts/list-portal-sites.mjs`.
 - **Geleerde les 3 — lege "Home" in plaats van de SPA (opgelost 19-07 ~20:00):** pac's
   omgevings-manifest verwees de drie "speciale" records van een code site — de **Home
   content-pagina** (waarvan `mspp_copy` de gecompileerde `index.html` IS), en de
@@ -42,7 +45,20 @@ Daarna is alles herhaalbaar via de workflows (zie [README](../README.md)).
   geverifieerd tegen Microsofts `power-pages-samples` car-sales-website codesite-sample.
   Sindsdien serveert <https://velopssupport.powerappsportals.com> de SPA. NB: een by-id GET
   op een niet-bestaande virtuele mspp-rij geeft HTTP 500 (geen 404) — bestaan checken met
-  een `$filter`-query.
+  een `$filter`-query; en PATCH op virtuele rijen wordt geweigerd — updaten = delete +
+  re-create op hetzelfde gepinde id (sync-spa-bundle doet dit voor de Home-copy).
+- **Geleerde les 4 — kale loginpagina (opgelost 20-07):** twee oorzaken. (1) Onze
+  `bundleFilePatterns` (`*.css`) verwijderde bij elke upload ook pac's standaard
+  theme-webfiles (`bootstrap.min.css`/`portalbasictheme.css`/`theme.css`) waar de
+  platform-loginpagina's op leunen → patronen versmald tot `assets/*` en de drie
+  bestanden staan nu in `portal/platform-theme/` (met VelOps-styling in `theme.css`:
+  Saira, geel/inkt) en worden op de live site gezet door
+  `scripts/apply-platform-theme.mjs` (Run Ops Script, idempotent). (2) De SPA linkte
+  naar het legacy-endpoint `/Account/Login`, dat GEEN site-css laadt en altijd kaal
+  rendert; het moderne `/SignIn` laadt de theme-webfiles wél. `SIGN_IN_URL` wijst nu
+  naar `/SignIn?ReturnUrl=…` — screenshot-geverifieerd: sign-in/registratie in
+  VelOps-stijl. De BRANDING-AUTH-notitie "loginpagina is niet te stylen" is hiermee
+  achterhaald: styling kan via de theme-webfiles.
 
 ## ① Environment-URL opzoeken → repo-variabele `DATAVERSE_URL`
 
@@ -121,10 +137,9 @@ Volledige details in [ai-proxy/README.md](../ai-proxy/README.md); kort:
       zie ai-proxy/README.md, sectie "Function key".
 - [ ] Repo-variabele `AI_PROXY_URL` = `https://velops-customer-ai.azurewebsites.net/api/messages`;
       repo-secret `AI_PROXY_FUNCTION_KEY` = de nieuwe key (paden: zie stap ③).
-- [ ] Draai **deploy-portal** één keer opnieuw (bundle pikt de AI-config op) — LET OP
-      geleerde les 2: dit maakt een nieuwe duplicaat-site aan en werkt de live site NIET
-      bij. Meld je daarna in de chat zodat de nieuwe bundle naar de live site
-      gesynchroniseerd wordt en de duplicaat opgeruimd.
+- [ ] Draai **Run Ops Script** met `scripts/sync-spa-bundle.mjs` (NIET deploy-portal —
+      geleerde les 2): dit bouwt de bundle mét de AI-config en zet hem rechtstreeks op
+      de live site.
 
 ## ⑥ E2E-smoketest (na ①–⑤)
 
