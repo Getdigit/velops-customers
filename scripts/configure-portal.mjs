@@ -282,11 +282,18 @@ async function upsertSiteSetting(setting, website) {
       console.log(`= setting unchanged  ${setting.name} = ${setting.value}`);
       return;
     }
-    await api(`mspp_sitesettings(${row.mspp_sitesettingid})`, {
-      method: 'PATCH',
-      body: { mspp_value: setting.value },
+    // The virtual provider rejects PATCH ("the given key was not present in
+    // the dictionary") — update = delete + re-create, same as elsewhere.
+    await api(`mspp_sitesettings(${row.mspp_sitesettingid})`, { method: 'DELETE' });
+    await api('mspp_sitesettings', {
+      method: 'POST',
+      body: {
+        mspp_name: setting.name,
+        mspp_value: setting.value,
+        'mspp_websiteid@odata.bind': `/mspp_websites(${website.mspp_websiteid})`,
+      },
     });
-    console.log(`~ setting updated    ${setting.name} = ${setting.value} (was ${JSON.stringify(row.mspp_value)})`);
+    console.log(`~ setting replaced   ${setting.name} = ${setting.value} (was ${JSON.stringify(row.mspp_value)})`);
     return;
   }
   await api('mspp_sitesettings', {
