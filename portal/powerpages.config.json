@@ -3,5 +3,5 @@
   "siteName": "VelOps Support",
   "compiledPath": "./dist",
   "defaultLandingPage": "index.html",
-  "bundleFilePatterns": ["*.js", "*.css", "assets/*.js", "assets/*.css"]
+  "bundleFilePatterns": ["assets/*.js", "assets/*.css"]
 }
