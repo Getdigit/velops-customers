@@ -25,7 +25,7 @@ import type {
   TeamMember,
   Ticket,
 } from "../types";
-import { DIRECTION, SOURCE } from "../types";
+import { DIRECTION, SOURCE, STATE, STATUS } from "../types";
 import type { DataProvider } from "./provider";
 import { readPortalUser } from "./user";
 
@@ -279,18 +279,55 @@ export class PortalProvider implements DataProvider {
   async createTicket(input: NewTicketInput): Promise<Ticket> {
     const me = await this.myProfile();
     if (!me.accountId) throw new Error("Your account is not linked to a team yet.");
+    // We bind ONLY gd_Contact (the signed-in contact — Self-scoped, so the
+    // AppendTo the association needs is genuinely granted) and gd_App. We do NOT
+    // bind gd_Account here: doing so needs AppendTo on the account record, and
+    // an "own account" grant is not reliably expressible as a Power Pages table
+    // permission (it kept failing with
+    // EntityPermissionAppendToIsMissingDuringAssociationChange). Instead a
+    // synchronous server-side rule stamps gd_account from the contact's parent
+    // account, which also keeps ticket visibility team-wide (account scope).
     const body: ODataRecord = {
       gd_name: input.subject,
       gd_description: input.description,
       gd_tickettype: input.tickettype,
       gd_priority: input.priority,
       gd_source: input.source ?? SOURCE.PORTAL_FORM,
-      "gd_Account@odata.bind": `/accounts(${me.accountId})`,
       "gd_Contact@odata.bind": `/contacts(${me.contactId})`,
     };
     if (input.appId) body["gd_App@odata.bind"] = `/gd_apps(${input.appId})`;
     const id = await this.post("gd_supporttickets", body);
-    return this.getTicket(id);
+    try {
+      // The read-back is account-scoped. It succeeds once the server-side rule
+      // has stamped gd_account (synchronous, so normally already done here). If
+      // it briefly 403s, fall back to an optimistic view so the create UX still
+      // succeeds — the list/detail pick up the real row (incl. VEL number) next
+      // load.
+      return await this.getTicket(id);
+    } catch {
+      const now = new Date().toISOString();
+      return {
+        id,
+        ticketNumber: "",
+        subject: input.subject,
+        description: input.description,
+        tickettype: input.tickettype,
+        priority: input.priority,
+        source: input.source ?? SOURCE.PORTAL_FORM,
+        statecode: STATE.ACTIVE,
+        statuscode: STATUS.NEW,
+        accountId: me.accountId,
+        accountName: me.accountName,
+        contactId: me.contactId,
+        contactName: me.fullName,
+        appId: input.appId ?? null,
+        appName: null,
+        resolutionSummary: null,
+        satisfactionRating: null,
+        createdOn: now,
+        modifiedOn: now,
+      };
+    }
   }
 
   async setStatus(ticketId: string, statuscode: number, statecode: number): Promise<void> {
