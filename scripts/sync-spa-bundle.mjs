@@ -21,7 +21,12 @@ const SITE_ID = "5fece082-7a65-4d32-8996-8e7b23153bd3"; // live: velopssupport.p
 const HOME_CONTENT_PAGE_ID = "45436da8-05da-4408-9eb3-b279faeae540";
 const PORTAL_DIR = new URL("../portal", import.meta.url).pathname;
 const HASHED_BUNDLE_RE = /-[A-Za-z0-9_-]{8}\.(js|css)$/; // vite content-hash pattern
-const TEXT_EXT_RE = /\.(html|js|css|svg|json|txt)$/i;
+const TEXT_EXT_RE = /\.(html|js|css|json|txt)$/i;
+// Dataverse blocks these attachment types (0x80043e09) — same family as the .js
+// block we cleared once. We NEVER ship them as webfiles: uploading one aborts the
+// whole sync and leaves the Home page pointing at the previous bundle. Anything
+// the UI needs (e.g. the logo) is inlined as a data URI in the platform theme.
+const BLOCKED_UPLOAD_RE = /\.(svg|htm)$/i;
 
 function buildSpa() {
   console.error("Building SPA (npm ci + vite build) ...");
@@ -64,8 +69,13 @@ async function uploadFileContent(componentId, name, body) {
 
 async function main() {
   buildSpa();
-  const dist = listDist();
-  console.error(`dist: ${dist.length} files`);
+  const allDist = listDist();
+  const blocked = allDist.filter((f) => BLOCKED_UPLOAD_RE.test(f.name));
+  const dist = allDist.filter((f) => !BLOCKED_UPLOAD_RE.test(f.name));
+  if (blocked.length) {
+    console.error(`skipping ${blocked.length} Dataverse-blocked file(s): ${blocked.map((f) => f.rel).join(", ")}`);
+  }
+  console.error(`dist: ${dist.length} files (of ${allDist.length})`);
 
   await whoami();
 
