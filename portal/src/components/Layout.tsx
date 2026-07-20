@@ -1,9 +1,12 @@
 /* ============================================================
    Portal shell — sticky top bar with logo, section label,
    nav (Tickets / Assistant / Profile), user chip and sign-out.
-   Power Pages platform-hosted auth endpoints:
-     sign in   /Account/Login?ReturnUrl=...
-     register  /Account/Login/Register
+   Power Pages platform-hosted auth endpoints. Use /SignIn, NOT the
+   legacy /Account/Login: the legacy page loads no site css and
+   renders unstyled, while /SignIn (and the register flow it links)
+   pick up our theme webfiles (portal/platform-theme/theme.css).
+     sign in   /SignIn?ReturnUrl=...
+     register  /Account/Login/Register  (redirects into the styled flow)
      sign out  /Account/Login/LogOff  (platform sign-out route)
    ============================================================ */
 import type { ReactNode } from "react";
@@ -11,7 +14,7 @@ import { NavLink } from "react-router-dom";
 import { initialsOf } from "../types";
 import VelLogo from "./VelLogo";
 
-export const SIGN_IN_URL = "/Account/Login?ReturnUrl=%2Ftickets";
+export const SIGN_IN_URL = "/SignIn?ReturnUrl=%2Ftickets";
 export const REGISTER_URL = "/Account/Login/Register";
 export const SIGN_OUT_URL = "/Account/Login/LogOff";
 
