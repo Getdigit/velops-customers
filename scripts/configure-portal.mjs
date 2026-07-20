@@ -96,13 +96,17 @@ const PERMISSIONS = [
     name: 'Apps - global',
     entity: 'gd_app',
     scope: SCOPE.GLOBAL,
-    read: true,
+    // AppendTo: a new ticket binds gd_App (product area) to this catalog row.
+    // Without it: EntityPermissionAppendToIsMissingDuringAssociationChange.
+    read: true, appendto: true,
   },
   {
     name: 'Contact - self',
     entity: 'contact',
     scope: SCOPE.SELF,
-    read: true, write: true,
+    // AppendTo: a new ticket binds gd_Contact, and every customer message binds
+    // gd_AuthorContact, to the signed-in contact.
+    read: true, write: true, appendto: true,
   },
   {
     // Account scope on the account table itself grants access to the signed-in
@@ -110,7 +114,8 @@ const PERMISSIONS = [
     name: 'Account - own team',
     entity: 'account',
     scope: SCOPE.ACCOUNT,
-    read: true,
+    // AppendTo: a new ticket binds gd_Account to this account row.
+    read: true, appendto: true,
   },
 ];
 
@@ -229,7 +234,7 @@ async function upsertPermission(def, website, permissionIdsByName) {
   }
 
   const existing = await api(
-    `mspp_entitypermissions?$select=mspp_entitypermissionid` +
+    `mspp_entitypermissions?$select=mspp_entitypermissionid,mspp_read,mspp_write,mspp_create,mspp_delete,mspp_append,mspp_appendto` +
       `&$filter=mspp_entityname eq ${odataQuote(def.entity)} and _mspp_websiteid_value eq ${website.mspp_websiteid}`
   );
 
@@ -238,11 +243,26 @@ async function upsertPermission(def, website, permissionIdsByName) {
     // The mspp_ virtual-entity provider rejects PATCHes on existing permission
     // rows (HTTP 412 duplicate rule with identity fields, HTTP 400 'given key
     // was not present' without them — observed 2026-07-19). Creation is
-    // authoritative: an existing row already carries the desired rights, so
-    // leave it untouched. If the permission DEFINITION ever changes, delete the
-    // row first and re-run this script.
-    id = existing.value[0].mspp_entitypermissionid;
-    console.log(`= permission exists   '${def.name}' (${id}) — left as-is`);
+    // authoritative: an existing row already carries its rights, so leave it
+    // untouched — BUT compare the live flags against the desired config and
+    // warn loudly on drift (a missing Append To here surfaces at runtime as
+    // EntityPermissionAppendToIsMissingDuringAssociationChange). Fixing drift =
+    // tick the flag in the Power Pages UI, or delete the row and re-run.
+    const row = existing.value[0];
+    id = row.mspp_entitypermissionid;
+    const desired = {
+      mspp_read: !!def.read, mspp_write: !!def.write, mspp_create: !!def.create,
+      mspp_delete: false, mspp_append: !!def.append, mspp_appendto: !!def.appendto,
+    };
+    const drift = Object.entries(desired)
+      .filter(([k, want]) => !!row[k] !== want)
+      .map(([k, want]) => `${k.replace('mspp_', '')}: live=${!!row[k]} want=${want}`);
+    if (drift.length) {
+      console.log(`~ permission exists   '${def.name}' (${id}) — FLAG DRIFT: ${drift.join(', ')}`);
+      console.log(`    fix in the Power Pages UI (Security -> Table permissions -> '${def.entity}'), or delete the row and re-run`);
+    } else {
+      console.log(`= permission exists   '${def.name}' (${id}) — flags match, left as-is`);
+    }
   } else {
     const created = await api('mspp_entitypermissions', {
       method: 'POST',

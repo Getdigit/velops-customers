@@ -208,14 +208,20 @@ async function verifyData() {
 // has NO separate friendly-name column (its primary name attribute IS
 // mspp_entityname), so permissions are identified by entity logical name —
 // unique per site in our config.
+// `flags` lists the privileges that MUST be true (others are not asserted). The
+// Append To flags on account/contact/gd_app are load-bearing: a new ticket binds
+// gd_Account/gd_Contact/gd_App and a customer message binds gd_AuthorContact, so
+// their target tables need Append To or the write fails at runtime with
+// EntityPermissionAppendToIsMissingDuringAssociationChange. Keep in sync with
+// scripts/configure-portal.mjs.
 const EXPECTED_PERMISSIONS = [
-  { label: 'Ticket - account scope', entity: 'gd_supportticket' },
-  { label: 'Message - parent via ticket', entity: 'gd_supportmessage' },
-  { label: 'Attachment - parent via ticket', entity: 'gd_ticketattachment' },
-  { label: 'Team apps - account scope', entity: 'gd_accountapp' },
-  { label: 'Apps - global', entity: 'gd_app' },
-  { label: 'Contact - self', entity: 'contact' },
-  { label: 'Account - own team', entity: 'account' },
+  { label: 'Ticket - account scope', entity: 'gd_supportticket', flags: ['mspp_read', 'mspp_create', 'mspp_append', 'mspp_appendto'] },
+  { label: 'Message - parent via ticket', entity: 'gd_supportmessage', flags: ['mspp_read', 'mspp_create', 'mspp_append', 'mspp_appendto'] },
+  { label: 'Attachment - parent via ticket', entity: 'gd_ticketattachment', flags: ['mspp_read', 'mspp_create', 'mspp_append', 'mspp_appendto'] },
+  { label: 'Team apps - account scope', entity: 'gd_accountapp', flags: ['mspp_read'] },
+  { label: 'Apps - global', entity: 'gd_app', flags: ['mspp_read', 'mspp_appendto'] },
+  { label: 'Contact - self', entity: 'contact', flags: ['mspp_read', 'mspp_appendto'] },
+  { label: 'Account - own team', entity: 'account', flags: ['mspp_read', 'mspp_appendto'] },
 ];
 
 const WEBAPI_TABLES = [
@@ -276,13 +282,23 @@ async function verifyPortal() {
     const authRole = rolesResult.value[0];
     check('portal', `built-in 'Authenticated Users' web role exists${tag}`, !!authRole);
 
-    for (const { label: name, entity } of EXPECTED_PERMISSIONS) {
+    for (const { label: name, entity, flags } of EXPECTED_PERMISSIONS) {
       const result = await api(
-        `mspp_entitypermissions?$select=mspp_entitypermissionid,mspp_entityname` +
+        `mspp_entitypermissions?$select=mspp_entitypermissionid,mspp_entityname,` +
+          `mspp_read,mspp_write,mspp_create,mspp_append,mspp_appendto` +
           `&$filter=mspp_entityname eq ${odataQuote(entity)} and _mspp_websiteid_value eq ${website.mspp_websiteid}`
       );
       const permission = result.value[0];
       check('portal', `table permission '${name}' exists${tag}`, !!permission);
+      if (permission) {
+        const missing = (flags || []).filter((f) => !permission[f]);
+        check(
+          'portal',
+          `table permission '${name}' has required privileges${tag}`,
+          missing.length === 0,
+          missing.length ? `missing ${missing.map((f) => f.replace('mspp_', '')).join(', ')} — tick it in the Power Pages Security UI` : ''
+        );
+      }
       if (permission && authRole) {
         // Assert the REAL runtime link: mspp_entitypermission_webrole. This is
         // the only relationship the Power Pages security engine reads. An empty

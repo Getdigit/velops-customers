@@ -154,12 +154,29 @@ pending-scherm hangen (óók al is zijn contact correct aan een team gekoppeld, 
   - [ ] **Team apps - account scope** (`gd_accountapp`)
   - [ ] **Apps - global** (`gd_app`)
   - [ ] **Account - own team** (`account`)
+- [ ] **Tabel-veld leeg?** Bij API-aangemaakte rechten kan het verplichte **Table**-veld leeg
+      staan (de kolom toont `--`). Kies dan de bijhorende tabel — let op: de weergavenaam wijkt
+      af van de technische naam: `gd_supportticket`→**Support Ticket**, `gd_supportmessage`→
+      **Support Message**, `gd_ticketattachment`→**Ticket Attachment**, `gd_accountapp`→**Team
+      App**, `gd_app`→**VelOps App**, `account`→**Account**, `contact`→**Contact**. Raak de
+      Access type / Relationship / vinkjes niet aan.
+- [ ] **Append To-privilege (anders faalt het aanmaken van een ticket).** Een nieuw ticket bindt
+      `gd_Account`/`gd_Contact`/`gd_App` en elk klantbericht bindt `gd_AuthorContact`; de
+      doel-tabellen hebben daarom **Append To** nodig, anders volgt
+      `EntityPermissionAppendToIsMissingDuringAssociationChange`. Vink **Append To** aan op:
+  - [ ] **Contact - self** (`contact`)
+  - [ ] **Apps - global** (`gd_app`)
+  - [ ] **Account - own team** (`account`)
+
+      (`gd_supportticket`, `gd_supportmessage` en `gd_ticketattachment` hebben Append + Append To
+      al vanuit configure-portal.)
 - [ ] De wijziging is meteen live (geen site-restart nodig). Herlaad het portaal en de
       pending-melding hoort weg te zijn.
 - [ ] Bevestig met **Run Ops Script → `scripts/verify.mjs`** (`VERIFY_SCOPE=portal`): elke
-      "table permission … linked to Authenticated Users" hoort **PASS** te zijn. Zolang er nog
-      één rood staat, is die permissie nog niet gekoppeld. (De SPN-/anonieme smoke-tests dekken
-      dit NIET — de SPN omzeilt portal-permissies.)
+      "table permission … linked to Authenticated Users" én "… has required privileges" hoort
+      **PASS** te zijn. Zolang er nog één rood staat, mist die permissie zijn rol-koppeling of
+      een privilege. (De SPN-/anonieme smoke-tests dekken dit NIET — de SPN omzeilt
+      portal-permissies.)
 
 ## ④b Site visibility op Public zetten (eenmalig, na activatie)
 
