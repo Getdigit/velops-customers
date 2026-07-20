@@ -6,7 +6,8 @@
 // Usage (CI): node scripts/dump-pages.mjs   [PORTAL_URL=https://...]
 
 const PORTAL_URL = (process.env.PORTAL_URL || "https://velopssupport.powerappsportals.com").replace(/\/+$/, "");
-const PAGES = ["/", "/Account/Login", "/profile", "/Access-Denied", "/Page-Not-Found"];
+const PAGES = ["/", "/Account/Login", "/SignIn", "/profile", "/Access-Denied", "/Page-Not-Found"];
+const FULL_DUMP = new Set(["/Account/Login", "/SignIn"]);
 
 async function get(path) {
   const res = await fetch(`${PORTAL_URL}${path}`, {
@@ -42,6 +43,22 @@ for (const page of PAGES) {
   }
   for (const ref of refs) {
     console.log(`  asset ${ref} -> ${await checkAsset(ref)}`);
+  }
+
+  // Does the SPA leak onto this platform page (root div + module bundle would
+  // make React mount over the sign-in form)?
+  console.log(
+    `  markers: rootDiv=${/<div id="root">/.test(r.text)}  spaBundle=${/assets\/index-[^"']+\.js/.test(r.text)}  ` +
+      `loginForm=${/type="password"|name="Password"/i.test(r.text)}  azureAdButton=${/AzureAD|Azure AD|ExternalLogin/i.test(r.text)}`,
+  );
+
+  if (FULL_DUMP.has(page)) {
+    const body = r.text.slice(r.text.search(/<body/i));
+    console.log(`  --- body of ${page} (${body.length} chars) ---`);
+    for (let i = 0; i < body.length && i < 30000; i += 3000) {
+      console.log(body.slice(i, i + 3000));
+    }
+    console.log(`  --- end body of ${page} ---`);
   }
 }
 console.log("\ndone");
