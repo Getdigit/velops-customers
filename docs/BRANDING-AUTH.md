@@ -9,7 +9,15 @@ Pages zelf, gerenderd buiten onze bundle om. Er zijn twee families endpoints:
 - **`/SignIn`** (modern, mét tabbladen Sign in / Register / Redeem invitation): laadt de
   **site-webfiles** `bootstrap.min.css` + `portalbasictheme.css` + `theme.css` — en dus
   ook onze VelOps-overrides in `portal/platform-theme/theme.css` (Saira, geel/inkt,
-  papier-achtergrond). **Dit is het endpoint dat de SPA gebruikt.**
+  papier-achtergrond). **Dit is het endpoint dat de SPA gebruikt.** Sinds 20-07 rendert
+  het als een volwaardige VelOps-kaart: wordmark + gele glow, gecentreerde witte kaart,
+  "Welcome back", verticale velden, gele actieknop (gescoped via `:has(.nav-account)`
+  zodat de SPA-pagina's onaangeraakt blijven).
+- **Entra ID staat UIT voor klanten (v1):** site settings
+  `Authentication/Registration/ExternalLoginEnabled` en `…/AzureADLoginEnabled` staan op
+  `false` (gezet door configure-portal), en theme.css verbergt elk
+  `form[action*="ExternalLogin"]`-blok als tweede slot. Alleen lokale accounts dus.
+  Terugzetten: beide settings op `true` + de hide-regels uit theme.css halen.
 - **`/Account/Login`** (legacy): laadt géén site-css en rendert altijd kaal — niet naar
   linken. (`/Account/Login/Register` en `/Account/Login/LogOff` komen wel goed terecht
   in de gestylede flow.)
