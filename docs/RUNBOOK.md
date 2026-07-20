@@ -140,11 +140,13 @@ Grotendeels geautomatiseerd via de workflow **deploy-ai-proxy** (details in
       publiceert de code, zet ALLOWED_ORIGINS + de Anthropic-key en provisiont een aparte
       function key `portal` (de waarde komt bewust nergens in logs).
 - [ ] Azure Portal → **velops-customer-ai → Functions → messages → Function keys** →
-      kopieer key `portal` → repo-secret `AI_PROXY_FUNCTION_KEY`; repo-variabele
-      `AI_PROXY_URL` = `https://velops-customer-ai.azurewebsites.net/api/messages`.
+      kopieer key `portal` → repo-**secret** `AI_PROXY_FUNCTION_KEY`; en zet
+      `AI_PROXY_URL` = `https://velops-customer-ai.azurewebsites.net/api/messages`
+      (mag als repo-**variabele** óf repo-**secret** — de workflow accepteert beide).
 - [ ] Draai **Run Ops Script** met `scripts/sync-spa-bundle.mjs` (NIET deploy-portal —
       geleerde les 2): dit bouwt de bundle mét de AI-config en zet hem rechtstreeks op
-      de live site.
+      de live site. Controleer met `scripts/smoke-ai-proxy.mjs` (Run Ops Script) — hoort
+      `{"pass":true,"passed":5}` te geven (preflight, echte Messages-call, key-gate).
 - NB: bewust géén Easy Auth op deze Function App — portaalbezoekers zijn geen
   tenant-gebruikers; de toegangscontrole is de function key + CORS.
 
