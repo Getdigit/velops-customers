@@ -1965,17 +1965,14 @@ body:has(.nav-account) #content-container.wrapper-body {
   padding: 52px 20px 90px;
 }
 
-/* Wordmark above the card */
+/* The real VelOps logo (same art as the SPA's VelLogo) above the card */
 body:has(.nav-account) #content::before {
-  content: "VELOPS";
+  content: "";
   display: block;
-  text-align: center;
-  font-family: 'Saira Extra Condensed', 'Saira Condensed', sans-serif;
-  font-weight: 700;
-  font-size: 54px;
-  line-height: 0.9;
-  letter-spacing: 0.02em;
-  color: #111111;
+  width: 168px;
+  height: 90px;
+  margin: 0 auto;
+  background: url('/velops-logo.svg') no-repeat center / contain;
 }
 
 /* Tabs: Sign in · Register · Redeem invitation */
