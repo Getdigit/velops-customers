@@ -49,7 +49,10 @@ az functionapp config appsettings set -n $FunctionApp -g $ResourceGroup `
 
 Write-Host "4/4  Installing deps + publishing code..."
 npm install | Out-Null
-func azure functionapp publish $FunctionApp
+# --javascript: language detection needs local.settings.json, which is not in
+# the repo (only the .example) — CI checkouts must state the worker explicitly.
+func azure functionapp publish $FunctionApp --javascript
+if ($LASTEXITCODE -ne 0) { throw "func publish failed (exit $LASTEXITCODE)" }
 
 $url = "https://$FunctionApp.azurewebsites.net/api/messages"
 Write-Host ""
