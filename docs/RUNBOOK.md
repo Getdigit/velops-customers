@@ -164,9 +164,15 @@ pending-scherm hangen (óók al is zijn contact correct aan een team gekoppeld, 
       `gd_Account`/`gd_Contact`/`gd_App` en elk klantbericht bindt `gd_AuthorContact`; de
       doel-tabellen hebben daarom **Append To** nodig, anders volgt
       `EntityPermissionAppendToIsMissingDuringAssociationChange`. Vink **Append To** aan op:
-  - [ ] **Contact - self** (`contact`)
-  - [ ] **Apps - global** (`gd_app`)
-  - [ ] **Account - own team** (`account`)
+  - [ ] **Contact - self** (`contact`) — Access type **Self access**
+  - [ ] **Apps - global** (`gd_app`) — Access type **Global access**
+  - [ ] **Account - own team** (`account`) — **Access type MOET `Global access` zijn**, niet
+        "Account access". "Account access" op de account-tabel vereist een account→account-relatie,
+        en de enige (`account_parent_account`, de moeder/dochter-hiërarchie) bevat je **eigen**
+        account NIET → de ticket-koppeling faalt. Global geeft hier geen lekbare data: het portaal
+        bevraagt de account-tabel nooit (staat niet in de Web API-tabellen; de teamnaam komt uit de
+        formatted value van de contact-lookup), en ticket/bericht-isolatie zit in hún eigen
+        account-scope. Zet dus `account` op **Global access**, met **Read + Append To** + de rol.
 
       (`gd_supportticket`, `gd_supportmessage` en `gd_ticketattachment` hebben Append + Append To
       al vanuit configure-portal.)

@@ -109,12 +109,19 @@ const PERMISSIONS = [
     read: true, write: true, appendto: true,
   },
   {
-    // Account scope on the account table itself grants access to the signed-in
-    // contact's own parent account record (no relationship column needed).
+    // GLOBAL scope on the account table — deliberately, not Account scope.
+    // "Account access" needs an account->account relationship, and the only one
+    // (account_parent_account, the parent/child hierarchy) does NOT include the
+    // user's OWN account, so binding a ticket to it fails at runtime with
+    // EntityPermissionAppendToIsMissingDuringAssociationChange (proven 2026-07-20).
+    // The portal never QUERIES the account table (it is absent from WEBAPI_TABLES;
+    // the team name arrives as the formatted value of the contact's
+    // _parentcustomerid lookup), so Global here grants no enumerable data — ticket
+    // and message isolation is enforced by their own account-scoped permissions.
+    // Read (harmless, keeps the lookup's formatted name) + AppendTo (the bind).
     name: 'Account - own team',
     entity: 'account',
-    scope: SCOPE.ACCOUNT,
-    // AppendTo: a new ticket binds gd_Account to this account row.
+    scope: SCOPE.GLOBAL,
     read: true, appendto: true,
   },
 ];
