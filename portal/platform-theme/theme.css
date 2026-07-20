@@ -1935,3 +1935,197 @@ button[type="submit"].btn-primary {
   color: #111111;
 }
 .nav-tabs > li > a, .nav-tabs .nav-link { color: #6F6C64; }
+
+/* ============================================================
+   VelOps account pages (sign-in / register / redeem invitation)
+   — hospitality-card treatment: warm paper, racing-yellow accent,
+   one centered card, condensed display type.
+   Every selector is scoped through :has(.nav-account), which only
+   exists on the platform account pages — the SPA pages are never
+   touched. Browsers without :has() gracefully keep the plain look.
+   ============================================================ */
+@font-face {
+  font-family: 'Saira Extra Condensed';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/saira-extracondensed-700-latin.woff2') format('woff2');
+}
+
+body:has(.nav-account) {
+  background:
+    radial-gradient(1100px 480px at 50% -8%, rgba(245, 217, 32, 0.20), transparent 62%),
+    #EEEDE9;
+  min-height: 100vh;
+}
+
+body:has(.nav-account) #content-container.wrapper-body {
+  max-width: 470px;
+  margin: 0 auto;
+  padding: 52px 20px 90px;
+}
+
+/* Wordmark above the card */
+body:has(.nav-account) #content::before {
+  content: "VELOPS";
+  display: block;
+  text-align: center;
+  font-family: 'Saira Extra Condensed', 'Saira Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 54px;
+  line-height: 0.9;
+  letter-spacing: 0.02em;
+  color: #111111;
+}
+
+/* Tabs: Sign in · Register · Redeem invitation */
+body:has(.nav-account) .nav-account {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  border-bottom: none;
+  margin: 16px 0 20px;
+  padding: 0;
+}
+body:has(.nav-account) .nav-account .nav-item { margin: 0; }
+body:has(.nav-account) .nav-account .nav-link {
+  font-family: 'Saira Condensed', sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #6F6C64;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  padding: 8px 14px;
+}
+body:has(.nav-account) .nav-account .nav-link:hover { color: #111111; }
+body:has(.nav-account) .nav-account .nav-link.active {
+  color: #111111;
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid #F5D920;
+}
+body:has(.nav-account) .nav-account .fa { display: none; }
+
+/* The card */
+body:has(.nav-account) #mainContent {
+  background: #FFFFFF;
+  border: 1px solid #DED9CF;
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(17, 17, 17, 0.05), 0 22px 44px -26px rgba(17, 17, 17, 0.38);
+  padding: 28px 28px 26px;
+}
+
+/* Belt-and-braces: the external-account column is switched off via the
+   Authentication/Registration/ExternalLoginEnabled site setting; hide it in
+   CSS too in case a cache still renders it. */
+body:has(.nav-account) .page-content .col-md-6:has(form[action="/Account/Login/ExternalLogin"]),
+body:has(.nav-account) #external-login-heading { display: none !important; }
+
+/* Single column instead of the bootstrap two-column grid */
+body:has(.nav-account) .page-content .row { display: block; margin: 0; }
+body:has(.nav-account) .page-content .row > [class*="col-"] {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  flex: none;
+}
+
+/* Headings: friendly copy on the sign-in card, calm condensed elsewhere */
+body:has(.nav-account) .login-heading-section {
+  font-family: 'Saira Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 24px;
+  color: #111111;
+  border: none;
+  margin: 0 0 18px;
+  padding: 0;
+}
+body:has(.nav-account) #local-login-heading { font-size: 0; }
+body:has(.nav-account) #local-login-heading::before {
+  content: "Welcome back";
+  font-size: 26px;
+}
+
+/* Vertical form */
+body:has(.nav-account) .portal-form .row.mb-3 { display: block; margin: 0 0 15px; }
+body:has(.nav-account) .portal-form [class*="col-md-"] { width: 100%; padding: 0; }
+body:has(.nav-account) .portal-form [class*="offset-md-"] { margin-left: 0; }
+body:has(.nav-account) .portal-form label.col-form-label {
+  display: block;
+  padding: 0 0 6px;
+  font-family: 'Saira Condensed', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6F6C64;
+}
+body:has(.nav-account) .form-control {
+  width: 100%;
+  padding: 11px 14px;
+  font-size: 15px;
+  border: 1.5px solid #D7D4CC;
+  border-radius: 10px;
+  background: #FBFAF8;
+  color: #111111;
+}
+
+/* Remember me */
+body:has(.nav-account) .checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #4A4842;
+}
+body:has(.nav-account) .checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #111111;
+}
+
+/* Primary action: full-width racing yellow */
+body:has(.nav-account) .portal-form .btn-primary {
+  width: 100%;
+  padding: 12px 16px;
+  font-family: 'Saira Condensed', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 10px;
+}
+
+/* Secondary actions (Forgot your password?) become quiet text links */
+body:has(.nav-account) .portal-form a.btn-default,
+body:has(.nav-account) .portal-form a.btn-secondary {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 4px 0 0;
+  background: transparent;
+  border: none;
+  text-align: center;
+  font-size: 13.5px;
+  color: #6F6C64;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+body:has(.nav-account) .portal-form a.btn-default:hover,
+body:has(.nav-account) .portal-form a.btn-secondary:hover { color: #111111; background: transparent; }
+
+/* Validation */
+body:has(.nav-account) .alert-danger {
+  border-radius: 10px;
+  border: 1px solid #E3B1AA;
+  background: #F9E7E4;
+  color: #8C2B21;
+  font-size: 14px;
+  padding: 10px 14px;
+}
+body:has(.nav-account) .field-validation-error { color: #8C2B21; font-size: 13px; }

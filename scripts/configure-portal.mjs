@@ -126,6 +126,12 @@ function buildSiteSettings() {
   }
   settings.push({ name: 'Authentication/Registration/Enabled', value: 'true' });
   settings.push({ name: 'Authentication/Registration/OpenRegistrationEnabled', value: 'true' });
+  // Customers sign in with LOCAL accounts only (for now): hide the whole
+  // external-account column incl. the Microsoft Entra ID button. Two settings
+  // as belt-and-braces — ExternalLoginEnabled kills the section, the AzureAD
+  // one the specific provider. Flip both to 'true' to bring Entra back.
+  settings.push({ name: 'Authentication/Registration/ExternalLoginEnabled', value: 'false' });
+  settings.push({ name: 'Authentication/Registration/AzureADLoginEnabled', value: 'false' });
   // Verbose Web API errors during build-out; flipped to 'false' in the hardening phase.
   settings.push({ name: 'Webapi/error/innererror', value: 'true' });
   return settings;
