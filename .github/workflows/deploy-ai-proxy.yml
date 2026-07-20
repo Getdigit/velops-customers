@@ -78,14 +78,42 @@ jobs:
             echo "ANTHROPIC_API_KEY app setting configured."
           fi
 
-      - name: Ensure dedicated function key 'portal' exists (value not logged)
+      - name: Set Dataverse SPN creds for the portal-write endpoint (never logged)
+        env:
+          DATAVERSE_URL: ${{ vars.DATAVERSE_URL }}
+          POWERPLATFORM_CLIENT_ID: ${{ secrets.POWERPLATFORM_CLIENT_ID }}
+          POWERPLATFORM_CLIENT_SECRET: ${{ secrets.POWERPLATFORM_CLIENT_SECRET }}
+          POWERPLATFORM_TENANT_ID: ${{ secrets.POWERPLATFORM_TENANT_ID }}
         run: |
+          # The portalwrite function creates tickets/messages with the admin SPN
+          # (the Power Pages portal Web API refuses portal-user associations on
+          # this site). Same SPN as the CI ops scripts; secret stays server-side.
+          if [ -z "$POWERPLATFORM_CLIENT_ID" ] || [ -z "$POWERPLATFORM_CLIENT_SECRET" ] || [ -z "$POWERPLATFORM_TENANT_ID" ] || [ -z "$DATAVERSE_URL" ]; then
+            echo "::warning::One of DATAVERSE_URL / POWERPLATFORM_* is empty — the portal-write endpoint will fail until they are set."
+          else
+            az functionapp config appsettings set -n velops-customer-ai -g velops-customer-ai-rg --output none \
+              --settings \
+                "DATAVERSE_URL=$DATAVERSE_URL" \
+                "POWERPLATFORM_CLIENT_ID=$POWERPLATFORM_CLIENT_ID" \
+                "POWERPLATFORM_CLIENT_SECRET=$POWERPLATFORM_CLIENT_SECRET" \
+                "POWERPLATFORM_TENANT_ID=$POWERPLATFORM_TENANT_ID"
+            echo "Dataverse SPN app settings configured for portalwrite."
+          fi
+
+      - name: Ensure function key 'portal' on both functions, same value (not logged)
+        run: |
+          # messages (Anthropic proxy) + portalwrite (Dataverse writes) share ONE
+          # key value so the SPA needs a single AI_PROXY_FUNCTION_KEY secret.
           az functionapp function keys set -g velops-customer-ai-rg -n velops-customer-ai \
             --function-name messages --key-name portal --output none
-          echo "Function key 'portal' provisioned."
+          KEY=$(az functionapp function keys list -g velops-customer-ai-rg -n velops-customer-ai \
+            --function-name messages --query portal -o tsv)
+          az functionapp function keys set -g velops-customer-ai-rg -n velops-customer-ai \
+            --function-name portalwrite --key-name portal --key-value "$KEY" --output none
+          echo "Function key 'portal' provisioned on messages + portalwrite (same value)."
           echo ""
           echo "NEXT (RUNBOOK stap ⑤):"
           echo "  1. Azure Portal -> velops-customer-ai -> Functions -> messages -> Function keys:"
-          echo "     copy key 'portal' into repo secret AI_PROXY_FUNCTION_KEY."
+          echo "     copy key 'portal' into repo secret AI_PROXY_FUNCTION_KEY (works for portalwrite too)."
           echo "  2. Set repo variable AI_PROXY_URL = https://velops-customer-ai.azurewebsites.net/api/messages"
-          echo "  3. Actions -> Run Ops Script -> scripts/sync-spa-bundle.mjs (SPA picks up the AI config)."
+          echo "  3. Actions -> Run Ops Script -> scripts/sync-spa-bundle.mjs (SPA picks up the AI + write config)."

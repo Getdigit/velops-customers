@@ -31,6 +31,21 @@ export function proxyEndpoint(): string {
 }
 
 /**
+ * Write endpoint on the SAME Function App (…/api/portalwrite), reusing the same
+ * 'portal' function key. Record creation that sets lookups runs here with the
+ * admin SPN because the Power Pages portal Web API refuses portal-user
+ * associations on this site (EntityPermissionAppendToIsMissingDuringAssociationChange).
+ * Returns "" when the proxy isn't configured yet.
+ */
+export function portalWriteEndpoint(): string {
+  if (!AI_PROXY_URL) return "";
+  const url = AI_PROXY_URL.replace(/\/api\/messages\/?(\?.*)?$/, "/api/portalwrite$1");
+  if (!AI_PROXY_KEY) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}code=${encodeURIComponent(AI_PROXY_KEY)}`;
+}
+
+/**
  * Model. Sonnet by default (cost cap — the function key ships in a
  * public bundle); flip USE_OPUS for demo-quality intake if needed.
  */

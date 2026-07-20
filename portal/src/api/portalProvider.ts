@@ -25,7 +25,8 @@ import type {
   TeamMember,
   Ticket,
 } from "../types";
-import { DIRECTION, SOURCE, STATE, STATUS } from "../types";
+import { DIRECTION, SOURCE } from "../types";
+import { portalWriteEndpoint } from "../ai/config";
 import type { DataProvider } from "./provider";
 import { readPortalUser } from "./user";
 
@@ -276,58 +277,45 @@ export class PortalProvider implements DataProvider {
     return rows.map((r) => this.mapTicket(r));
   }
 
+  /**
+   * Portal WRITE via the Azure Function (…/api/portalwrite), NOT the Power Pages
+   * Web API. Record creation that sets lookups (gd_Contact/gd_Account/gd_App on a
+   * ticket, gd_Ticket/gd_AuthorContact on a message) is refused for portal users
+   * on this site — every association fails with
+   * EntityPermissionAppendToIsMissingDuringAssociationChange regardless of table
+   * permissions. The function performs the create with the admin SPN and derives
+   * the account server-side from the contact, so team-wide scope is preserved.
+   * Reads still go through the portal Web API (getTicket/listTickets), unchanged.
+   */
+  private async portalWrite(action: string, payload: Record<string, unknown>): Promise<ODataRecord> {
+    const endpoint = portalWriteEndpoint();
+    if (!endpoint) {
+      throw new Error("The write service isn't configured yet — the VelOps team is finishing setup.");
+    }
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action, ...payload }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { value?: ODataRecord; error?: { message?: string } };
+    if (!res.ok) throw new Error(json?.error?.message || `Write failed (HTTP ${res.status}).`);
+    if (!json.value) throw new Error("The write service returned an empty result.");
+    return json.value;
+  }
+
   async createTicket(input: NewTicketInput): Promise<Ticket> {
     const me = await this.myProfile();
     if (!me.accountId) throw new Error("Your account is not linked to a team yet.");
-    // We bind ONLY gd_Contact (the signed-in contact — Self-scoped, so the
-    // AppendTo the association needs is genuinely granted) and gd_App. We do NOT
-    // bind gd_Account here: doing so needs AppendTo on the account record, and
-    // an "own account" grant is not reliably expressible as a Power Pages table
-    // permission (it kept failing with
-    // EntityPermissionAppendToIsMissingDuringAssociationChange). Instead a
-    // synchronous server-side rule stamps gd_account from the contact's parent
-    // account, which also keeps ticket visibility team-wide (account scope).
-    const body: ODataRecord = {
-      gd_name: input.subject,
-      gd_description: input.description,
-      gd_tickettype: input.tickettype,
-      gd_priority: input.priority,
-      gd_source: input.source ?? SOURCE.PORTAL_FORM,
-      "gd_Contact@odata.bind": `/contacts(${me.contactId})`,
-    };
-    if (input.appId) body["gd_App@odata.bind"] = `/gd_apps(${input.appId})`;
-    const id = await this.post("gd_supporttickets", body);
-    try {
-      // The read-back is account-scoped. It succeeds once the server-side rule
-      // has stamped gd_account (synchronous, so normally already done here). If
-      // it briefly 403s, fall back to an optimistic view so the create UX still
-      // succeeds — the list/detail pick up the real row (incl. VEL number) next
-      // load.
-      return await this.getTicket(id);
-    } catch {
-      const now = new Date().toISOString();
-      return {
-        id,
-        ticketNumber: "",
-        subject: input.subject,
-        description: input.description,
-        tickettype: input.tickettype,
-        priority: input.priority,
-        source: input.source ?? SOURCE.PORTAL_FORM,
-        statecode: STATE.ACTIVE,
-        statuscode: STATUS.NEW,
-        accountId: me.accountId,
-        accountName: me.accountName,
-        contactId: me.contactId,
-        contactName: me.fullName,
-        appId: input.appId ?? null,
-        appName: null,
-        resolutionSummary: null,
-        satisfactionRating: null,
-        createdOn: now,
-        modifiedOn: now,
-      };
-    }
+    const row = await this.portalWrite("createTicket", {
+      contactId: me.contactId,
+      subject: input.subject,
+      description: input.description,
+      tickettype: input.tickettype,
+      priority: input.priority,
+      source: input.source ?? SOURCE.PORTAL_FORM,
+      appId: input.appId ?? null,
+    });
+    return this.mapTicket(row);
   }
 
   async setStatus(ticketId: string, statuscode: number, statecode: number): Promise<void> {
@@ -363,19 +351,12 @@ export class PortalProvider implements DataProvider {
 
   async createMessage(ticketId: string, body: string): Promise<Message> {
     const me = await this.myProfile();
-    const title = body.length > 80 ? `${body.slice(0, 77)}...` : body;
-    const record: ODataRecord = {
-      gd_name: title,
-      gd_body: body,
-      gd_direction: DIRECTION.CUSTOMER,
-      gd_authorname: me.fullName,
-      "gd_Ticket@odata.bind": `/gd_supporttickets(${ticketId})`,
-      "gd_AuthorContact@odata.bind": `/contacts(${me.contactId})`,
-    };
-    const id = await this.post("gd_supportmessages", record);
-    const row = await this.get<ODataRecord>(
-      `gd_supportmessages(${id})?$select=gd_supportmessageid,gd_name,gd_body,gd_direction,gd_authorname,createdon,_gd_ticket_value,_gd_authorcontact_value`,
-    );
+    // Server-side write (binds gd_Ticket + gd_AuthorContact) — see portalWrite.
+    const row = await this.portalWrite("createMessage", {
+      contactId: me.contactId,
+      ticketId,
+      body,
+    });
     return this.mapMessage(row);
   }
 
