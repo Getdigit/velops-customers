@@ -14,9 +14,10 @@
  *   schema — 6 gd_ tables, gd_supportticket statuscodes, autonumber format, file column,
  *            gd_internalnote HasNotes, 4 global option sets (12269xxxx), role, app module
  *   data   — >=10 gd_app rows; optional smoke ticket (SMOKE=1)
- *   portal — mspp_website, the 7 table permissions linked to Authenticated Users, site
- *            settings, and the NEGATIVE assertions: zero permissions / Webapi settings
- *            for gd_internalnote or annotation (spec D1)
+ *   portal — mspp_website, the 7 table permissions linked to Authenticated Users via the
+ *            REAL runtime relationship mspp_entitypermission_webrole (a FAIL here means the
+ *            manual Security-UI role step is still pending), site settings, and the NEGATIVE
+ *            assertions: zero permissions / Webapi settings for gd_internalnote or annotation (spec D1)
  */
 
 import { api, whoami, fail, odataQuote } from './lib/dataverse.mjs';
@@ -239,8 +240,10 @@ function expectedSiteSettingNames() {
   return names;
 }
 
-// N:N navigation between mspp_entitypermission and mspp_webrole (see configure-portal.mjs).
-// (the virtual mspp_entitypermission_webrole N:N is a non-persisting facade — links are read via powerpagecomponent_powerpagecomponent)
+// The permission<->web-role link is read from the mspp_entitypermission_webrole
+// relationship — the ONE relationship the Power Pages runtime honours. It cannot
+// be written through the Web API (see configure-portal.mjs); this section fails
+// loud when it is empty so the required Security-UI step is never silently skipped.
 
 async function verifyPortal() {
   console.error('\n== portal ==');
@@ -281,15 +284,25 @@ async function verifyPortal() {
       const permission = result.value[0];
       check('portal', `table permission '${name}' exists${tag}`, !!permission);
       if (permission && authRole) {
-        // The virtual mspp_entitypermission_webrole N:N is a non-persisting
-        // facade — the real link lives in the powerpagecomponent SELF N:N
-        // (powerpagecomponent_powerpagecomponent), where mspp ids map 1:1 onto
-        // component ids. Read it there (same layer configure-portal writes).
+        // Assert the REAL runtime link: mspp_entitypermission_webrole. This is
+        // the only relationship the Power Pages security engine reads. An empty
+        // row here is exactly the "EntityPermissionReadIsMissing" the portal
+        // hit — so this check must NOT fall back to the powerpagecomponent
+        // self-N:N (which reads back "linked" but the runtime ignores → a false
+        // green that masked this bug for a full deploy cycle). This link can
+        // only be created in the Power Pages Security UI (the API can't write
+        // it); a FAIL here means that manual step is still pending.
         const linkedResult = await api(
-          `powerpagecomponents(${permission.mspp_entitypermissionid})/powerpagecomponent_powerpagecomponent?$select=powerpagecomponentid`
+          `mspp_entitypermissions(${permission.mspp_entitypermissionid})/mspp_entitypermission_webrole?$select=mspp_webroleid`,
+          { allow404: true }
+        ).catch(() => ({ value: [] }));
+        const linked = (linkedResult?.value || []).some((r) => r.mspp_webroleid === authRole.mspp_webroleid);
+        check(
+          'portal',
+          `table permission '${name}' linked to Authenticated Users${tag}`,
+          linked,
+          linked ? '' : 'runtime link mspp_entitypermission_webrole is empty — add the role in the Power Pages Security UI'
         );
-        const linked = linkedResult.value.some((c) => c.powerpagecomponentid === authRole.mspp_webroleid);
-        check('portal', `table permission '${name}' linked to Authenticated Users${tag}`, linked);
       }
     }
 

@@ -3,14 +3,21 @@
  * Configure the Power Pages site (ENHANCED data model — mspp_* rows in Dataverse):
  *   1. Resolve the mspp_website row (fails loud if the site was never created/activated).
  *   2. Resolve the built-in "Authenticated Users" web role.
- *   3. Upsert the 7 table permissions and associate each with that role.
+ *   3. Upsert the 7 table permissions and verify each is linked to that role.
  *   4. Upsert the site settings (Web API enablement, open registration, innererror).
  *
  * Usage:  node scripts/configure-portal.mjs
  * Env:    DATAVERSE_URL, POWERPLATFORM_CLIENT_ID, POWERPLATFORM_CLIENT_SECRET, POWERPLATFORM_TENANT_ID
  *
  * Idempotent: permissions and settings are matched by name (+ website); existing rows
- * are PATCHed to the desired state, role associations are only added when missing.
+ * are left as-is (the virtual provider rejects PATCH — see upsertPermission).
+ *
+ * ONE MANUAL STEP: the permission<->web-role link lives in the
+ * mspp_entitypermission_webrole relationship, which is NOT writable through the
+ * Web API (deep-insert -> 500; $ref -> 204 but persists nothing — proven in
+ * scripts/fix-perm-webrole.mjs). This script detects the missing links and
+ * prints the exact Power Pages Security-UI steps to add "Authenticated Users"
+ * to each permission. scripts/verify.mjs asserts the links are present.
  *
  * SECURITY INVARIANT (spec D1): gd_internalnote and annotation must NEVER get a table
  * permission or a Webapi site setting — internal notes are hard-invisible to the portal.
@@ -248,26 +255,58 @@ async function upsertPermission(def, website, permissionIdsByName) {
   return id;
 }
 
-/** Associate a permission with the web role via the N:N (skip when already linked). */
+// The runtime relationship the Power Pages security engine actually reads to
+// decide whether a web role holds a table permission. This is the ONLY link
+// that counts — an empty row here yields "EntityPermissionReadIsMissing" at
+// runtime regardless of what the storage-layer self-N:N reads back.
+const RUNTIME_NN = 'mspp_entitypermission_webrole';
+
+/**
+ * Report whether a permission is genuinely linked to the web role, and attempt
+ * an API link when it is not.
+ *
+ * HARD PLATFORM LIMITATION (proven 2026-07-19, scripts/fix-perm-webrole.mjs):
+ * mspp_entitypermission_webrole CANNOT be populated through the Web API —
+ *   - deep insert (`${RUNTIME_NN}@odata.bind` at create)  -> HTTP 500
+ *   - `$ref` POST                                         -> HTTP 204 but 0 rows persist
+ * The powerpagecomponent SELF-N:N that an earlier version of this script wrote
+ * to reads back "linked" but the runtime IGNORES it (a false positive that hid
+ * this bug for a full deploy cycle). So this function no longer claims success
+ * from that facade. It checks the real relationship, makes one best-effort $ref
+ * attempt (harmless, and future platform updates may start honouring it), and
+ * returns whether the role is truly attached. main() collects the misses and
+ * prints the one manual step that must be done in the Power Pages Security UI.
+ *
+ * Returns true when the role is linked in mspp_entitypermission_webrole.
+ */
 async function ensureRoleAssociation(permissionId, permissionName, role) {
-  // The virtual mspp_entitypermission_webrole N:N accepts $ref POSTs with 204
-  // but never persists them (observed 2026-07-19). The enhanced data model
-  // stores component-to-component links in the powerpagecomponent SELF N:N
-  // (powerpagecomponent_powerpagecomponent) — mspp row ids map 1:1 onto
-  // powerpagecomponent ids, so associate at that storage layer instead.
-  const NAV = 'powerpagecomponent_powerpagecomponent';
-  const linked = await api(
-    `powerpagecomponents(${permissionId})/${NAV}?$select=powerpagecomponentid`
-  );
-  if (linked.value.some((c) => c.powerpagecomponentid === role.mspp_webroleid)) {
-    console.log(`  = already linked to '${role.mspp_name}'`);
-    return;
+  const roleRows = await api(
+    `mspp_entitypermissions(${permissionId})/${RUNTIME_NN}?$select=mspp_webroleid`,
+    { allow404: true }
+  ).catch(() => ({ value: [] }));
+  if (roleRows?.value?.some((r) => r.mspp_webroleid === role.mspp_webroleid)) {
+    console.log(`  = already linked to '${role.mspp_name}' (runtime relationship)`);
+    return true;
   }
-  await api(`powerpagecomponents(${permissionId})/${NAV}/$ref`, {
+
+  // Best-effort: try the $ref once. It returns 204 today without persisting, but
+  // costs nothing and self-heals if the platform ever starts honouring it.
+  await api(`mspp_entitypermissions(${permissionId})/${RUNTIME_NN}/$ref`, {
     method: 'POST',
-    body: { '@odata.id': `${baseUrl()}/api/data/v9.2/powerpagecomponents(${role.mspp_webroleid})` },
-  });
-  console.log(`  + linked '${permissionName}' to '${role.mspp_name}'`);
+    body: { '@odata.id': `${baseUrl()}/api/data/v9.2/mspp_webroles(${role.mspp_webroleid})` },
+  }).catch(() => {});
+
+  const after = await api(
+    `mspp_entitypermissions(${permissionId})/${RUNTIME_NN}?$select=mspp_webroleid`,
+    { allow404: true }
+  ).catch(() => ({ value: [] }));
+  if (after?.value?.some((r) => r.mspp_webroleid === role.mspp_webroleid)) {
+    console.log(`  + linked '${permissionName}' to '${role.mspp_name}' (runtime relationship)`);
+    return true;
+  }
+
+  console.log(`  ! NOT linked to '${role.mspp_name}' — API cannot write ${RUNTIME_NN}; needs the Security UI`);
+  return false;
 }
 
 /** Upsert one site setting (match by name + website). */
@@ -318,6 +357,10 @@ async function main() {
   // stale shells receive harmless config and get deleted during cleanup.
   const websites = await resolveWebsites();
 
+  // Collected across every site: permissions whose runtime web-role link is
+  // missing and can only be added in the Power Pages Security UI.
+  const unlinked = [];
+
   for (const website of websites) {
     console.log(`\n=== Configuring '${website.mspp_name}' (${website.mspp_websiteid}) ===`);
     const role = await resolveAuthenticatedUsersRole(website.mspp_websiteid);
@@ -327,13 +370,39 @@ async function main() {
     for (const def of PERMISSIONS) {
       const id = await upsertPermission(def, website, permissionIdsByName);
       permissionIdsByName.set(def.name, id);
-      await ensureRoleAssociation(id, def.name, role);
+      const linked = await ensureRoleAssociation(id, def.name, role);
+      if (!linked) unlinked.push({ site: website.mspp_name, permission: def.name, role: role.mspp_name });
     }
 
     console.log('--- Site settings ---');
     for (const setting of buildSiteSettings()) {
       await upsertSiteSetting(setting, website);
     }
+  }
+
+  if (unlinked.length > 0) {
+    console.log(`\n${'='.repeat(72)}`);
+    console.log('ACTION REQUIRED — one manual step the Web API cannot do for you');
+    console.log('='.repeat(72));
+    console.log(
+      'The web-role link for the table permissions below lives in the\n' +
+      'mspp_entitypermission_webrole relationship, which is NOT writable through\n' +
+      'the Dataverse Web API (deep-insert -> 500; $ref -> 204 but persists nothing).\n' +
+      'Until it is set, the portal shows "EntityPermissionReadIsMissing" and every\n' +
+      'signed-in user is stuck on the pending gate.\n\n' +
+      'Fix it once, in the Power Pages Security UI:\n' +
+      '  1. make.powerpages.microsoft.com -> pick the VelOps Support site\n' +
+      '  2. left rail: Security -> Table permissions\n' +
+      '  3. open EACH permission below, "Add roles", tick "Authenticated Users", Save\n' +
+      '  4. Save & the change is live immediately (no site restart needed)\n'
+    );
+    for (const u of unlinked) {
+      console.log(`  - [${u.site}] "${u.permission}"  ->  add role "${u.role}"`);
+    }
+    console.log('\nThen run `node scripts/verify.mjs` (VERIFY_SCOPE=portal) to confirm all links are green.');
+    console.log('='.repeat(72));
+  } else {
+    console.log('\nAll table permissions are linked to the web role (runtime relationship verified).');
   }
 
   console.log('\nconfigure-portal: done. Run `node scripts/verify.mjs` (VERIFY_SCOPE=portal) to assert.');

@@ -7,18 +7,26 @@ Daarna is alles herhaalbaar via de workflows (zie [README](../README.md)).
 
 - ①–④ zijn **uitgevoerd**: env-URL `https://velops-customer.crm4.dynamics.com`, SPN + secrets
   staan, solution geïmporteerd (verify groen incl. smoke-ticket `VEL-01001`), portal geüpload,
-  site geactiveerd op **`https://velopssupport.powerappsportals.com`**, configure-portal **groen**
-  (7 table permissions gelinkt aan Authenticated Users, 15 site settings, D1-negatief-asserts —
-  op beide benoemde site-rijen). NB: de rol-koppeling loopt via de `powerpagecomponent`
-  self-N:N; de virtuele `mspp_entitypermission_webrole`-relatie accepteert associates maar
-  bewaart ze niet (zie scripts/configure-portal.mjs).
+  site geactiveerd op **`https://velopssupport.powerappsportals.com`**. De 7 table permissions
+  en 15 site settings staan (incl. D1-negatief-asserts, op beide benoemde site-rijen).
+- **⚠️ ÉÉN handmatige stap resteert (stap ④c hieronder): de rol-koppeling.** De koppeling
+  tabelrecht → webrol leeft in de relatie `mspp_entitypermission_webrole`, en die is **niet
+  via de Web API te schrijven** (deep-insert → HTTP 500; `$ref` → 204 maar bewaart 0 rijen —
+  bewezen in `scripts/fix-perm-webrole.mjs`). Een eerdere versie schreef naar de
+  `powerpagecomponent` self-N:N die "gekoppeld" teruglas maar door de runtime wordt genegeerd
+  (vals-groen). Zolang de echte relatie leeg is toont het portaal
+  **`EntityPermissionReadIsMissing`** / "You don't have permission to read the contact table"
+  en blijft elke ingelogde bezoeker op het pending-scherm. **Fix = eenmalig in de Power Pages
+  Security-UI** (stap ④c). `configure-portal` detecteert dit nu en print de exacte stap;
+  `verify.mjs` (scope=portal) faalt rood tot de koppeling er echt staat.
 - **⑤ is uitgevoerd (20-07):** Function App `velops-customer-ai` staat live (Node 24, eigen
   function key `portal` + CORS op de live-URL, Anthropic-key server-side). De hele keten is
   geverifieerd — `scripts/smoke-ai-proxy.mjs` 5/5 (preflight, echte Messages-call, key-gate)
   en `scripts/verify-bundle-ai.mjs` bevestigt dat de live bundle de proxy-URL ingebakken heeft.
   Deployen gebeurt via de workflow **deploy-ai-proxy**; bundle-updates via
   `scripts/sync-spa-bundle.mjs`.
-- **Nog te doen: ⑥ (handmatige login-smoketest)**, plus de sanering/security-rotatie hieronder.
+- **Nog te doen: ④c (rol-koppeling in de Security-UI) en ⑥ (handmatige login-smoketest)**, plus
+  de sanering/security-rotatie hieronder.
 - **Geleerde les 1 — js-blokkade:** Dataverse blokkeert `.js`-bijlagen standaard; daardoor faalde
   elke code-site-upload met `PortalFileContentUploadFailed`. Opgelost door `js` te verwijderen
   uit *Blocked attachments* (admin center → env → Settings → Privacy + Security). **Bij een
@@ -114,19 +122,44 @@ Nu kunnen **deploy-solution** en **deploy-portal** draaien (Actions → workflow
 - [ ] Sectie **Inactive sites** → **VelOps Support** → **Activate** (even wachten op provisioning).
 - [ ] Noteer de site-URL (`https://<naam>.powerappsportals.com`) — nodig voor CORS in stap ⑤.
 - [ ] Draai daarna de workflow **configure-portal** (table permissions + site settings; die
-      faalt bewust zolang de site niet actief is).
-- [ ] **VERPLICHT na configure-portal: herstart de site.** De tabelrechten worden via de
-      API aangemaakt (niet via de Power Pages-beheerapp), en de runtime draait tot een
-      herstart met zijn oude, lege permissie-cache — een ingelogde bezoeker krijgt dan
-      "You don't have permission to read the contact table" en blijft op het pending-scherm
-      hangen (ook al is zijn contact correct aan een team gekoppeld). Fix:
-      <https://make.powerpages.microsoft.com> → site **VelOps Support** → **⋯ / More →
-      Restart**. NB: dit wordt NIET door de SPN-/anonieme smoke-tests gedekt (de SPN omzeilt
-      portal-permissies) — het is een eenmalige handmatige stap.
+      faalt bewust zolang de site niet actief is). Aan het eind print de log óf alles gelinkt
+      is, óf een **ACTION REQUIRED**-blok met de permissies die nog een rol-koppeling missen —
+      dat is stap ④c hieronder.
 
 **Workflow-volgorde totaal:** `deploy-solution` → `deploy-portal` → activeren (deze stap) →
-`configure-portal`. `deploy-portal` hoeft hierna **nooit** meer (geleerde les 2) — nieuwe
-bundles (o.a. na stap ⑤) gaan via **Run Ops Script → `scripts/sync-spa-bundle.mjs`**.
+`configure-portal` → **④c rol-koppeling (Security-UI)**. `deploy-portal` hoeft hierna **nooit**
+meer (geleerde les 2) — nieuwe bundles (o.a. na stap ⑤) gaan via
+**Run Ops Script → `scripts/sync-spa-bundle.mjs`**.
+
+## ④c Rol-koppeling: "Authenticated Users" aan de 7 tabelrechten (eenmalig, VERPLICHT)
+
+**Dit is de één stap die de Web API niet kan en die je dus met de hand doet.** De runtime
+leest de koppeling tabelrecht → webrol uitsluitend uit de relatie
+`mspp_entitypermission_webrole`, en die is niet via de API te vullen (deep-insert → HTTP 500;
+`$ref` → 204 maar 0 rijen bewaard — bewezen in `scripts/fix-perm-webrole.mjs`). Blijft die
+relatie leeg, dan geeft het portaal `EntityPermissionReadIsMissing` /
+"You don't have permission to read the contact table" en blijft elke ingelogde klant op het
+pending-scherm hangen (óók al is zijn contact correct aan een team gekoppeld, óók in incognito,
+óók na een site-restart — het is niet de cache maar de ontbrekende koppeling).
+
+- [ ] <https://make.powerpages.microsoft.com> → kies de omgeving **VelOps Customer** → site
+      **VelOps Support**.
+- [ ] Linker rail: **Security → Table permissions**.
+- [ ] Open **elk** van deze 7 rechten, klik **Add roles** (of **Edit** → sectie *Roles*), vink
+      **Authenticated Users** aan, **Save**:
+  - [ ] **Contact - self** (`contact`)
+  - [ ] **Ticket - account scope** (`gd_supportticket`)
+  - [ ] **Message - parent via ticket** (`gd_supportmessage`)
+  - [ ] **Attachment - parent via ticket** (`gd_ticketattachment`)
+  - [ ] **Team apps - account scope** (`gd_accountapp`)
+  - [ ] **Apps - global** (`gd_app`)
+  - [ ] **Account - own team** (`account`)
+- [ ] De wijziging is meteen live (geen site-restart nodig). Herlaad het portaal en de
+      pending-melding hoort weg te zijn.
+- [ ] Bevestig met **Run Ops Script → `scripts/verify.mjs`** (`VERIFY_SCOPE=portal`): elke
+      "table permission … linked to Authenticated Users" hoort **PASS** te zijn. Zolang er nog
+      één rood staat, is die permissie nog niet gekoppeld. (De SPN-/anonieme smoke-tests dekken
+      dit NIET — de SPN omzeilt portal-permissies.)
 
 ## ④b Site visibility op Public zetten (eenmalig, na activatie)
 
