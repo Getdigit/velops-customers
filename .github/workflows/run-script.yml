@@ -27,8 +27,10 @@ jobs:
       POWERPLATFORM_CLIENT_SECRET: ${{ secrets.POWERPLATFORM_CLIENT_SECRET }}
       POWERPLATFORM_TENANT_ID: ${{ secrets.POWERPLATFORM_TENANT_ID }}
       # AI-proxy build config for scripts that rebuild the SPA (sync-spa-bundle);
-      # both may be empty before RUNBOOK stap ⑤ — same contract as deploy-portal.
-      VITE_AI_PROXY_URL: ${{ vars.AI_PROXY_URL }}
+      # both may be empty before RUNBOOK stap ⑤. The URL is not sensitive, so we
+      # accept it from EITHER the repo variable OR a repo secret — whichever the
+      # operator happened to create (variable/secret mix-ups are common).
+      VITE_AI_PROXY_URL: ${{ vars.AI_PROXY_URL || secrets.AI_PROXY_URL }}
       VITE_AI_PROXY_KEY: ${{ secrets.AI_PROXY_FUNCTION_KEY }}
     steps:
       - uses: actions/checkout@v4
