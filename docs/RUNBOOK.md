@@ -25,8 +25,19 @@ Daarna is alles herhaalbaar via de workflows (zie [README](../README.md)).
   en `scripts/verify-bundle-ai.mjs` bevestigt dat de live bundle de proxy-URL ingebakken heeft.
   Deployen gebeurt via de workflow **deploy-ai-proxy**; bundle-updates via
   `scripts/sync-spa-bundle.mjs`.
-- **Nog te doen: ④c (rol-koppeling in de Security-UI) en ⑥ (handmatige login-smoketest)**, plus
-  de sanering/security-rotatie hieronder.
+- **⚠️ Grote as-built wijziging (20-07): record-creatie loopt server-side.** De Power
+  Pages-runtime honoreert op deze site het **koppelrecht (Append/AppendTo) niet** voor
+  portaalgebruikers — élke lookup-binding op create faalt met
+  `EntityPermissionAppendToIsMissingDuringAssociationChange`, ongeacht scope, verse permissie
+  of restart (uitputtend bewezen). Daarom maken **ticket + bericht** (`/api/portalwrite`) en
+  **bijlage** (`/api/portalupload`) op dezelfde Function App de rijen aan met de admin-SPN; de
+  account wordt server-side afgeleid uit het contact en team-scope wordt server-side
+  afgedwongen. `deploy-ai-proxy` zet nu ook `DATAVERSE_URL`+`POWERPLATFORM_*` als app settings
+  en pint de `portal`-key op alle drie de functies. End-to-end geverifieerd met
+  `scripts/smoke-portalwrite.mjs` (ticket→bericht→bijlage→team-guard, met opruiming). **Reads**
+  en scalar-PATCH (status/rating/profiel) lopen nog wél als de portalgebruiker via de tabelrechten.
+- **Nog te doen: ④c (rol-koppeling in de Security-UI, nodig voor de READS) en ⑥ (handmatige
+  login-smoketest)**, plus de sanering/security-rotatie hieronder.
 - **Geleerde les 1 — js-blokkade:** Dataverse blokkeert `.js`-bijlagen standaard; daardoor faalde
   elke code-site-upload met `PortalFileContentUploadFailed`. Opgelost door `js` te verwijderen
   uit *Blocked attachments* (admin center → env → Settings → Privacy + Security). **Bij een

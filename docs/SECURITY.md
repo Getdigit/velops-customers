@@ -16,6 +16,16 @@ server-side af; de SPA is puur presentatie.
 | Contact - self | `contact` | Self | R/W |
 | Account - own team | `account` | Account | R |
 
+> ⚠️ **Belangrijke as-built nuance (20-07-2026): op deze site honoreert de Power Pages-runtime
+> het koppelrecht (Append/AppendTo) NIET voor portaalgebruikers.** Lezen werkt; élke
+> associatie die een portaalgebruiker op create zet (een lookup binden) faalt met
+> `EntityPermissionAppendToIsMissingDuringAssociationChange` — ongeacht scope, verse
+> permissie, of cache-clear/restart (uitputtend bewezen). De R/W/C/Append/AppendTo-kolommen
+> hierboven gelden dus voor wat de tabelrechten *zouden* moeten toestaan; effectief sturen ze
+> op deze site alleen **reads** (en scalar-PATCH: status/rating/profiel). **Het aanmaken van
+> tickets/berichten/bijlagen loopt daarom server-side** via de Function (zie hieronder), niet
+> via de portal Web API. De account-scoping op reads blijft volledig gelden.
+
 Kernpunten:
 
 - **Account-scoping is het anker.** Teamleden zien en bewerken elkaars tickets (bewuste
@@ -23,6 +33,16 @@ Kernpunten:
   matcht geen enkele scope → ziet nul rijen → de SPA toont de pending-gate. De koppeling
   (registratie → view "Unlinked portal signups" → account zetten) is daarmee ook de
   autorisatie-handeling.
+- **Record-creatie loopt server-side (admin SPN).** `POST /api/portalwrite` (ticket + bericht)
+  en `POST /api/portalupload` (bijlage) op de Function App `velops-customer-ai` maken de rijen
+  aan met de service-principal, omdat de portal Web API het koppelen weigert (zie de nuance
+  hierboven). De **account wordt server-side afgeleid** uit `contact.parentcustomerid` (nooit
+  van de client vertrouwd), en berichten/bijlagen worden geweigerd op een ticket buiten het
+  eigen team (403). Zo blijft team-scope gehandhaafd. Toegang tot het endpoint is dezelfde
+  **function key** als de AI-proxy (semi-publiek in de bundle — zie hieronder). Restrisico
+  (v1, hardenbaar): wie een ander contact-GUID kent kan een ticket op naam van dat team
+  aanmaken (geen data te *lezen* zo). Fast-follow: een Power Pages-sessietoken in de Function
+  valideren i.p.v. de client-`contactId` vertrouwen.
 - **D1 — interne notities zijn hard onzichtbaar.** Table permissions kunnen niet op
   kolomwaarde filteren, dus interne notities staan in een aparte tabel `gd_internalnote`
   die NOOIT een table permission of `Webapi/*`-site setting krijgt; interne bijlagen zijn
@@ -35,9 +55,12 @@ Kernpunten:
   `gd_supportmessage` met `gd_direction = VelOps` aanmaken. Impact: cosmetisch en alleen
   binnen het eigen team (de account-scope blijft gelden). Fix staat op de backlog: een
   synchrone plugin die `gd_direction` op create afdwingt op basis van de caller.
-- Mutaties vanuit de SPA dragen het CSRF-token (`__RequestVerificationToken` via
-  `shell.getTokenDeferred()`); reads/writes lopen als de ingelogde portalgebruiker,
-  nooit met een service-account.
+- **Reads** en scalar-PATCH (status/rating/profiel) vanuit de SPA lopen als de ingelogde
+  portalgebruiker en dragen het CSRF-token (`__RequestVerificationToken` via
+  `shell.getTokenDeferred()`). **Record-creatie** (ticket/bericht/bijlage) loopt bewust NIET
+  als de portalgebruiker maar via de Function met de service-principal — dat is de enige weg
+  die op deze site werkt (koppelrecht-nuance hierboven), met de account server-side afgeleid
+  en de team-scope server-side afgedwongen.
 
 ## AI-key-realiteit (assistent / ai-proxy)
 
