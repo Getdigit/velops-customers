@@ -111,8 +111,8 @@ Nu kunnen **deploy-solution** en **deploy-portal** draaien (Actions → workflow
       faalt bewust zolang de site niet actief is).
 
 **Workflow-volgorde totaal:** `deploy-solution` → `deploy-portal` → activeren (deze stap) →
-`configure-portal`. `deploy-portal` hoeft hierna **niet** opnieuw — alleen één keer na stap ⑤,
-zodat de bundle `AI_PROXY_URL`/key meeneemt.
+`configure-portal`. `deploy-portal` hoeft hierna **nooit** meer (geleerde les 2) — nieuwe
+bundles (o.a. na stap ⑤) gaan via **Run Ops Script → `scripts/sync-spa-bundle.mjs`**.
 
 ## ④b Site visibility op Public zetten (eenmalig, na activatie)
 
@@ -127,19 +127,26 @@ Entra-login gestuurd en klanten kunnen er dus niet in. Zichtbaar aan een
 
 ## ⑤ AI-proxy: Function App `velops-customer-ai` deployen
 
-Volledige details in [ai-proxy/README.md](../ai-proxy/README.md); kort:
+Grotendeels geautomatiseerd via de workflow **deploy-ai-proxy** (details in
+[ai-proxy/README.md](../ai-proxy/README.md)); jij zet alleen de credentials/secrets:
 
-- [ ] Lokaal: `az login` (juiste subscription) → `cd ai-proxy` →
-      `./deploy.ps1 -AllowedOrigins https://velopssupport.powerappsportals.com`.
-- [ ] Zet de Anthropic-key (nooit committen):
-      `az functionapp config appsettings set -n velops-customer-ai -g velops-customer-ai-rg --settings ANTHROPIC_API_KEY="<key>"`.
-- [ ] Maak een **aparte, roteerbare function key** aan (bv. `portal`) en check CORS —
-      zie ai-proxy/README.md, sectie "Function key".
-- [ ] Repo-variabele `AI_PROXY_URL` = `https://velops-customer-ai.azurewebsites.net/api/messages`;
-      repo-secret `AI_PROXY_FUNCTION_KEY` = de nieuwe key (paden: zie stap ③).
+- [ ] Eenmalig deployment-credentials maken (Azure CLI, ingelogd op de juiste subscription):
+      `az ad sp create-for-rbac --name velops-customer-ai-deploy --role Contributor --scopes /subscriptions/<subscription-id> --sdk-auth`
+      → de VOLLEDIGE JSON-output als repo-secret `AZURE_CREDENTIALS`.
+- [ ] Repo-secret `ANTHROPIC_API_KEY` = een **nieuwe** Anthropic-key (de eerdere is door
+      de chat gegaan — die niet hergebruiken).
+- [ ] Actions → **deploy-ai-proxy** → **Run workflow** (de CORS-origin staat standaard op
+      de live site-URL). De workflow maakt de resource group, storage, Function App aan,
+      publiceert de code, zet ALLOWED_ORIGINS + de Anthropic-key en provisiont een aparte
+      function key `portal` (de waarde komt bewust nergens in logs).
+- [ ] Azure Portal → **velops-customer-ai → Functions → messages → Function keys** →
+      kopieer key `portal` → repo-secret `AI_PROXY_FUNCTION_KEY`; repo-variabele
+      `AI_PROXY_URL` = `https://velops-customer-ai.azurewebsites.net/api/messages`.
 - [ ] Draai **Run Ops Script** met `scripts/sync-spa-bundle.mjs` (NIET deploy-portal —
       geleerde les 2): dit bouwt de bundle mét de AI-config en zet hem rechtstreeks op
       de live site.
+- NB: bewust géén Easy Auth op deze Function App — portaalbezoekers zijn geen
+  tenant-gebruikers; de toegangscontrole is de function key + CORS.
 
 ## ⑥ E2E-smoketest (na ①–⑤)
 

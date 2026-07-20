@@ -1,0 +1,76 @@
+name: Deploy AI proxy (Function App velops-customer-ai)
+
+# Automates RUNBOOK stap ⑤ as far as GitHub can reach: creates/updates the
+# Azure Function App via ai-proxy/deploy.ps1, sets the Anthropic key from the
+# repo secret, and provisions a dedicated function key named "portal" (value is
+# NEVER logged — copy it from the Azure Portal into AI_PROXY_FUNCTION_KEY).
+#
+# One-time prerequisites (RUNBOOK stap ⑤):
+#   - repo secret AZURE_CREDENTIALS: output of
+#     az ad sp create-for-rbac --name velops-customer-ai-deploy \
+#       --role Contributor --scopes /subscriptions/<subscription-id> --sdk-auth
+#   - repo secret ANTHROPIC_API_KEY: a FRESH Anthropic key
+# Afterwards: copy function key "portal" (Azure Portal) into repo secret
+# AI_PROXY_FUNCTION_KEY, set repo variable AI_PROXY_URL, and run
+# Run Ops Script -> scripts/sync-spa-bundle.mjs so the SPA picks it up.
+
+on:
+  workflow_dispatch:
+    inputs:
+      allowed-origins:
+        description: 'CORS origin(s) for the proxy (comma-separated)'
+        required: false
+        type: string
+        default: 'https://velopssupport.powerappsportals.com'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check prerequisites
+        run: |
+          if [ -z "${{ secrets.AZURE_CREDENTIALS }}" ]; then
+            echo "::error::Repo secret AZURE_CREDENTIALS is not set — see RUNBOOK stap ⑤."
+            exit 1
+          fi
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Azure Functions Core Tools
+        run: npm install -g azure-functions-core-tools@4 --unsafe-perm true
+
+      - name: Deploy Function App
+        shell: pwsh
+        run: ./ai-proxy/deploy.ps1 -AllowedOrigins "${{ inputs.allowed-origins }}"
+
+      - name: Set Anthropic key (from repo secret, never logged)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::warning::Repo secret ANTHROPIC_API_KEY is empty — the proxy will return errors until it is set (RUNBOOK stap ⑤)."
+          else
+            az functionapp config appsettings set -n velops-customer-ai -g velops-customer-ai-rg \
+              --settings "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY" --output none
+            echo "ANTHROPIC_API_KEY app setting configured."
+          fi
+
+      - name: Ensure dedicated function key 'portal' exists (value not logged)
+        run: |
+          az functionapp function keys set -g velops-customer-ai-rg -n velops-customer-ai \
+            --function-name messages --key-name portal --output none
+          echo "Function key 'portal' provisioned."
+          echo ""
+          echo "NEXT (RUNBOOK stap ⑤):"
+          echo "  1. Azure Portal -> velops-customer-ai -> Functions -> messages -> Function keys:"
+          echo "     copy key 'portal' into repo secret AI_PROXY_FUNCTION_KEY."
+          echo "  2. Set repo variable AI_PROXY_URL = https://velops-customer-ai.azurewebsites.net/api/messages"
+          echo "  3. Actions -> Run Ops Script -> scripts/sync-spa-bundle.mjs (SPA picks up the AI config)."

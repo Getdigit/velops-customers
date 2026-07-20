@@ -51,17 +51,17 @@ Write-Host "============================================================" -Foreg
 Write-Host "Function deployed:  $url" -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "TWO manual steps remain (security — do them in this order):" -ForegroundColor Yellow
+Write-Host "Remaining steps (the deploy-ai-proxy workflow does the first one" -ForegroundColor Yellow
+Write-Host "automatically when the ANTHROPIC_API_KEY repo secret is set):" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "  A) Lock it down with Easy Auth (Entra ID) so only signed-in"
-Write-Host "     team members can call it — Portal > $FunctionApp >"
-Write-Host "     Authentication > Add identity provider > Microsoft >"
-Write-Host "     Require authentication, unauthenticated = HTTP 401."
-Write-Host ""
-Write-Host "  B) Set your Anthropic key (your secret — never commit it):"
+Write-Host "  A) Set the Anthropic key (secret — never commit it):"
 Write-Host "     az functionapp config appsettings set -n $FunctionApp -g $ResourceGroup ``"
 Write-Host "       --settings ANTHROPIC_API_KEY=""<your-anthropic-key>"""
 Write-Host ""
+Write-Host "  NOTE: no Easy Auth on this app — the CUSTOMER portal's visitors are"
+Write-Host "  not tenant users, so Entra auth would block them. Access control is"
+Write-Host "  the function key + ALLOWED_ORIGINS CORS (see src/functions/messages.js)."
+Write-Host ""
 Write-Host "Then set the repo variable AI_PROXY_URL to this URL and the secret"
-Write-Host "AI_PROXY_FUNCTION_KEY to a dedicated function key, and re-run the"
-Write-Host "deploy-portal workflow so the SPA bundle picks them up."
+Write-Host "AI_PROXY_FUNCTION_KEY to the dedicated 'portal' function key, and run"
+Write-Host "Run Ops Script -> scripts/sync-spa-bundle.mjs so the SPA picks them up."
