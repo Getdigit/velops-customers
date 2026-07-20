@@ -1,6 +1,7 @@
 # One-shot deploy of the VelOps CUSTOMER AI proxy to Azure (a separate Function
 # App from the internal hub's velops-ai-proxy — own key, own CORS, own caps).
-# Creates a resource group, storage account, and Function App (Node 20, v4),
+# Creates a resource group, storage account, and Function App (Node 24, v4 —
+# Azure refuses new Node 20 apps since its EOL on 2026-04-30),
 # publishes the code, and sets ALLOWED_ORIGINS. It does NOT set the Anthropic
 # key or configure Easy Auth — those are deliberate manual/secure steps printed
 # at the end. Run after `az login` to the correct (VelOps/getdigit) account.
@@ -23,6 +24,11 @@ $acct = az account show --query "{name:name, user:user.name}" -o json | ConvertF
 Write-Host "Deploying as: $($acct.user)  /  subscription: $($acct.name)" -ForegroundColor Cyan
 
 if (-not $StorageAccount) {
+  # Reuse the storage account from an earlier (partial) run so re-runs are
+  # idempotent instead of leaving orphans behind.
+  $StorageAccount = az storage account list -g $ResourceGroup --query "[0].name" -o tsv 2>$null
+}
+if (-not $StorageAccount) {
   # Storage account names: 3-24 chars, lowercase letters+digits only, globally unique.
   $StorageAccount = ("velopscustai" + (Get-Random -Maximum 999999)).ToLower()
 }
@@ -33,10 +39,10 @@ az group create -n $ResourceGroup -l $Location | Out-Null
 Write-Host "2/4  Storage account $StorageAccount..."
 az storage account create -n $StorageAccount -g $ResourceGroup -l $Location --sku Standard_LRS | Out-Null
 
-Write-Host "3/4  Function App $FunctionApp (Node 20, Functions v4)..."
+Write-Host "3/4  Function App $FunctionApp (Node 24, Functions v4)..."
 az functionapp create -n $FunctionApp -g $ResourceGroup `
   --storage-account $StorageAccount --consumption-plan-location $Location `
-  --runtime node --runtime-version 20 --functions-version 4 `
+  --runtime node --runtime-version 24 --functions-version 4 `
   --disable-app-insights true | Out-Null
 az functionapp config appsettings set -n $FunctionApp -g $ResourceGroup `
   --settings "ALLOWED_ORIGINS=$AllowedOrigins" | Out-Null
