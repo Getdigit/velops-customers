@@ -6,8 +6,8 @@
 // Usage (CI): node scripts/dump-pages.mjs   [PORTAL_URL=https://...]
 
 const PORTAL_URL = (process.env.PORTAL_URL || "https://velopssupport.powerappsportals.com").replace(/\/+$/, "");
-const PAGES = ["/", "/Account/Login", "/SignIn", "/profile", "/Access-Denied", "/Page-Not-Found"];
-const FULL_DUMP = new Set(["/Account/Login", "/SignIn"]);
+const PAGES = ["/", "/SignIn", "/Account/Login/Register", "/profile"];
+const FULL_DUMP = new Set([]);
 
 async function get(path) {
   const res = await fetch(`${PORTAL_URL}${path}`, {
