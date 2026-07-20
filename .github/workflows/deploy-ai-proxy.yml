@@ -100,20 +100,34 @@ jobs:
             echo "Dataverse SPN app settings configured for portalwrite."
           fi
 
-      - name: Ensure function key 'portal' on both functions, same value (not logged)
+      - name: Ensure function key 'portal' on both functions (STABLE value, not logged)
+        env:
+          AI_PROXY_FUNCTION_KEY: ${{ secrets.AI_PROXY_FUNCTION_KEY }}
         run: |
           # messages (Anthropic proxy) + portalwrite (Dataverse writes) share ONE
           # key value so the SPA needs a single AI_PROXY_FUNCTION_KEY secret.
-          az functionapp function keys set -g velops-customer-ai-rg -n velops-customer-ai \
-            --function-name messages --key-name portal --output none
-          KEY=$(az functionapp function keys list -g velops-customer-ai-rg -n velops-customer-ai \
-            --function-name messages --query portal -o tsv)
-          az functionapp function keys set -g velops-customer-ai-rg -n velops-customer-ai \
-            --function-name portalwrite --key-name portal --key-value "$KEY" --output none
-          echo "Function key 'portal' provisioned on messages + portalwrite (same value)."
-          echo ""
-          echo "NEXT (RUNBOOK stap ⑤):"
-          echo "  1. Azure Portal -> velops-customer-ai -> Functions -> messages -> Function keys:"
-          echo "     copy key 'portal' into repo secret AI_PROXY_FUNCTION_KEY (works for portalwrite too)."
-          echo "  2. Set repo variable AI_PROXY_URL = https://velops-customer-ai.azurewebsites.net/api/messages"
-          echo "  3. Actions -> Run Ops Script -> scripts/sync-spa-bundle.mjs (SPA picks up the AI + write config)."
+          # CRITICAL: `keys set` WITHOUT --key-value REGENERATES the key, which
+          # would invalidate the key already baked into the live SPA bundle. So on
+          # every re-deploy we PIN both functions to the known secret value; only
+          # the very first deploy (no secret yet) lets Azure generate one.
+          if [ -n "$AI_PROXY_FUNCTION_KEY" ]; then
+            az functionapp function keys set -g velops-customer-ai-rg -n velops-customer-ai \
+              --function-name messages --key-name portal --key-value "$AI_PROXY_FUNCTION_KEY" --output none
+            az functionapp function keys set -g velops-customer-ai-rg -n velops-customer-ai \
+              --function-name portalwrite --key-name portal --key-value "$AI_PROXY_FUNCTION_KEY" --output none
+            echo "Pinned 'portal' key on messages + portalwrite to the AI_PROXY_FUNCTION_KEY secret."
+          else
+            az functionapp function keys set -g velops-customer-ai-rg -n velops-customer-ai \
+              --function-name messages --key-name portal --output none
+            KEY=$(az functionapp function keys list -g velops-customer-ai-rg -n velops-customer-ai \
+              --function-name messages --query portal -o tsv)
+            az functionapp function keys set -g velops-customer-ai-rg -n velops-customer-ai \
+              --function-name portalwrite --key-name portal --key-value "$KEY" --output none
+            echo "Generated 'portal' key on messages + copied to portalwrite (first deploy)."
+            echo ""
+            echo "NEXT (RUNBOOK stap ⑤):"
+            echo "  1. Azure Portal -> velops-customer-ai -> Functions -> messages -> Function keys:"
+            echo "     copy key 'portal' into repo secret AI_PROXY_FUNCTION_KEY (works for portalwrite too)."
+            echo "  2. Set repo variable AI_PROXY_URL = https://velops-customer-ai.azurewebsites.net/api/messages"
+            echo "  3. Actions -> Run Ops Script -> scripts/sync-spa-bundle.mjs (SPA picks up the AI + write config)."
+          fi
