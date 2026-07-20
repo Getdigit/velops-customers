@@ -30,11 +30,26 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Check prerequisites
+        env:
+          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
         run: |
-          if [ -z "${{ secrets.AZURE_CREDENTIALS }}" ]; then
+          if [ -z "$AZURE_CREDENTIALS" ]; then
             echo "::error::Repo secret AZURE_CREDENTIALS is not set — see RUNBOOK stap ⑤."
             exit 1
           fi
+          # Must be EXACTLY the JSON block from `az ad sp create-for-rbac ... --sdk-auth`
+          # ({ ... } only — no WARNING lines or prompt text copied along from the shell).
+          if ! printf '%s' "$AZURE_CREDENTIALS" | jq -e 'type == "object"' > /dev/null 2>&1; then
+            echo "::error::AZURE_CREDENTIALS is not valid JSON. Re-paste ONLY the { ... } block from the az ad sp create-for-rbac output (no warning/prompt lines)."
+            exit 1
+          fi
+          for key in clientId clientSecret subscriptionId tenantId; do
+            if ! printf '%s' "$AZURE_CREDENTIALS" | jq -e --arg k "$key" 'has($k)' > /dev/null 2>&1; then
+              echo "::error::AZURE_CREDENTIALS is missing the '$key' field — use the --sdk-auth output format."
+              exit 1
+            fi
+          done
+          echo "AZURE_CREDENTIALS looks valid (JSON with the required fields)."
 
       - uses: azure/login@v2
         with:
