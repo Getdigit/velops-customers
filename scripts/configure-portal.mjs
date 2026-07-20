@@ -300,33 +300,17 @@ const RUNTIME_NN = 'mspp_entitypermission_webrole';
  * Returns true when the role is linked in mspp_entitypermission_webrole.
  */
 async function ensureRoleAssociation(permissionId, permissionName, role) {
-  const roleRows = await api(
-    `mspp_entitypermissions(${permissionId})/${RUNTIME_NN}?$select=mspp_webroleid`,
-    { allow404: true }
-  ).catch(() => ({ value: [] }));
-  if (roleRows?.value?.some((r) => r.mspp_webroleid === role.mspp_webroleid)) {
-    console.log(`  = already linked to '${role.mspp_name}' (runtime relationship)`);
-    return true;
-  }
-
-  // Best-effort: try the $ref once. It returns 204 today without persisting, but
-  // costs nothing and self-heals if the platform ever starts honouring it.
+  // Best-effort $ref (harmless; returns 204 without persisting today, self-heals
+  // if the platform ever honours it). The effective link can be neither WRITTEN
+  // nor READ through the SPN: the mspp_entitypermission_webrole navigation stays
+  // empty even for a link that works at runtime (proven 2026-07-20 against the
+  // live 'contact' link). So we make no linked/not-linked claim here — the link
+  // is a Security-UI step whose only reliable confirmation is a portal login.
   await api(`mspp_entitypermissions(${permissionId})/${RUNTIME_NN}/$ref`, {
     method: 'POST',
     body: { '@odata.id': `${baseUrl()}/api/data/v9.2/mspp_webroles(${role.mspp_webroleid})` },
   }).catch(() => {});
-
-  const after = await api(
-    `mspp_entitypermissions(${permissionId})/${RUNTIME_NN}?$select=mspp_webroleid`,
-    { allow404: true }
-  ).catch(() => ({ value: [] }));
-  if (after?.value?.some((r) => r.mspp_webroleid === role.mspp_webroleid)) {
-    console.log(`  + linked '${permissionName}' to '${role.mspp_name}' (runtime relationship)`);
-    return true;
-  }
-
-  console.log(`  ! NOT linked to '${role.mspp_name}' — API cannot write ${RUNTIME_NN}; needs the Security UI`);
-  return false;
+  console.log(`  · '${permissionName}' -> '${role.mspp_name}': ensure this role link in the Security UI (API can't read/write it)`);
 }
 
 /** Upsert one site setting (match by name + website). */
@@ -377,10 +361,6 @@ async function main() {
   // stale shells receive harmless config and get deleted during cleanup.
   const websites = await resolveWebsites();
 
-  // Collected across every site: permissions whose runtime web-role link is
-  // missing and can only be added in the Power Pages Security UI.
-  const unlinked = [];
-
   for (const website of websites) {
     console.log(`\n=== Configuring '${website.mspp_name}' (${website.mspp_websiteid}) ===`);
     const role = await resolveAuthenticatedUsersRole(website.mspp_websiteid);
@@ -390,8 +370,7 @@ async function main() {
     for (const def of PERMISSIONS) {
       const id = await upsertPermission(def, website, permissionIdsByName);
       permissionIdsByName.set(def.name, id);
-      const linked = await ensureRoleAssociation(id, def.name, role);
-      if (!linked) unlinked.push({ site: website.mspp_name, permission: def.name, role: role.mspp_name });
+      await ensureRoleAssociation(id, def.name, role);
     }
 
     console.log('--- Site settings ---');
@@ -400,32 +379,26 @@ async function main() {
     }
   }
 
-  if (unlinked.length > 0) {
-    console.log(`\n${'='.repeat(72)}`);
-    console.log('ACTION REQUIRED — one manual step the Web API cannot do for you');
-    console.log('='.repeat(72));
-    console.log(
-      'The web-role link for the table permissions below lives in the\n' +
-      'mspp_entitypermission_webrole relationship, which is NOT writable through\n' +
-      'the Dataverse Web API (deep-insert -> 500; $ref -> 204 but persists nothing).\n' +
-      'Until it is set, the portal shows "EntityPermissionReadIsMissing" and every\n' +
-      'signed-in user is stuck on the pending gate.\n\n' +
-      'Fix it once, in the Power Pages Security UI:\n' +
-      '  1. make.powerpages.microsoft.com -> pick the VelOps Support site\n' +
-      '  2. left rail: Security -> Table permissions\n' +
-      '  3. open EACH permission below, "Add roles", tick "Authenticated Users", Save\n' +
-      '  4. Save & the change is live immediately (no site restart needed)\n'
-    );
-    for (const u of unlinked) {
-      console.log(`  - [${u.site}] "${u.permission}"  ->  add role "${u.role}"`);
-    }
-    console.log('\nThen run `node scripts/verify.mjs` (VERIFY_SCOPE=portal) to confirm all links are green.');
-    console.log('='.repeat(72));
-  } else {
-    console.log('\nAll table permissions are linked to the web role (runtime relationship verified).');
-  }
+  console.log(`\n${'='.repeat(72)}`);
+  console.log('MANUAL STEP the Web API can neither do nor verify — web-role links');
+  console.log('='.repeat(72));
+  console.log(
+    'Each table permission must be linked to "Authenticated Users". That link\n' +
+    'lives in mspp_entitypermission_webrole, which the SPN can neither WRITE\n' +
+    '(deep-insert -> 500; $ref -> 204 persists nothing) nor READ (the nav returns\n' +
+    '0 rows even for a link that works at runtime). So it is invisible to this\n' +
+    'script and to verify.mjs — the ONLY reliable confirmation is a portal login.\n\n' +
+    'Do it once, in the Power Pages Security UI (make.powerpages.microsoft.com ->\n' +
+    'VelOps Support -> Security), from EITHER side:\n' +
+    '  - Table permissions: open each permission, add role "Authenticated Users"; OR\n' +
+    '  - Web roles: open "Authenticated Users", add all 7 table permissions.\n' +
+    'Confirm by signing into the portal: reads work AND a new ticket saves (the\n' +
+    'ticket binds account/contact/app, which also needs Append To on those — see\n' +
+    'RUNBOOK ④c). The change is live immediately (no site restart).'
+  );
+  console.log('='.repeat(72));
 
-  console.log('\nconfigure-portal: done. Run `node scripts/verify.mjs` (VERIFY_SCOPE=portal) to assert.');
+  console.log('\nconfigure-portal: done. Run `node scripts/verify.mjs` (VERIFY_SCOPE=portal) to assert the readable state.');
 }
 
 main().catch((err) => fail('configure-portal.mjs failed.', err));

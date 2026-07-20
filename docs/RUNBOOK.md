@@ -172,11 +172,15 @@ pending-scherm hangen (óók al is zijn contact correct aan een team gekoppeld, 
       al vanuit configure-portal.)
 - [ ] De wijziging is meteen live (geen site-restart nodig). Herlaad het portaal en de
       pending-melding hoort weg te zijn.
-- [ ] Bevestig met **Run Ops Script → `scripts/verify.mjs`** (`VERIFY_SCOPE=portal`): elke
-      "table permission … linked to Authenticated Users" én "… has required privileges" hoort
-      **PASS** te zijn. Zolang er nog één rood staat, mist die permissie zijn rol-koppeling of
-      een privilege. (De SPN-/anonieme smoke-tests dekken dit NIET — de SPN omzeilt
-      portal-permissies.)
+- [ ] **De rol-koppeling is NIET met de SPN te verifiëren.** `mspp_entitypermission_webrole`
+      geeft via de API 0 rijen terug, óók voor een koppeling die in de praktijk wél werkt
+      (bewezen 20-07 op de live `contact`-koppeling). `scripts/verify.mjs` bevestigt daarom enkel
+      wat wél leesbaar is (bestaan van de permissies, **privileges** incl. Append To, site
+      settings, D1-negatief-asserts) en toont de koppeling als een niet-blokkerende **NOTE**.
+      De **enige** betrouwbare check op de rol-koppeling is **inloggen op het portaal**: de
+      lijsten laden én een nieuw ticket bewaart. Let op: `account` is de tabel die je nergens
+      rechtstreeks leest (alleen via lookups), dus een ontbrekende koppeling dáár merk je pas bij
+      het **aanmaken** van een ticket (`EntityPermissionAppendToIsMissingDuringAssociationChange`).
 
 ## ④b Site visibility op Public zetten (eenmalig, na activatie)
 

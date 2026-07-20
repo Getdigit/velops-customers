@@ -300,24 +300,23 @@ async function verifyPortal() {
         );
       }
       if (permission && authRole) {
-        // Assert the REAL runtime link: mspp_entitypermission_webrole. This is
-        // the only relationship the Power Pages security engine reads. An empty
-        // row here is exactly the "EntityPermissionReadIsMissing" the portal
-        // hit — so this check must NOT fall back to the powerpagecomponent
-        // self-N:N (which reads back "linked" but the runtime ignores → a false
-        // green that masked this bug for a full deploy cycle). This link can
-        // only be created in the Power Pages Security UI (the API can't write
-        // it); a FAIL here means that manual step is still pending.
+        // The effective web-role <-> permission link is NOT readable via the SPN.
+        // The mspp_entitypermission_webrole navigation returns 0 rows even for a
+        // link that works at runtime (proven 2026-07-20: the live, functioning
+        // 'contact' link reads back empty here while portal reads succeed). And
+        // the powerpagecomponent self-N:N reads back links the runtime ignores.
+        // So neither source is trustworthy — we do NOT assert the link (that only
+        // produced false reds/greens). The role link is a Security-UI step whose
+        // sole reliable confirmation is an actual portal login (RUNBOOK ④c). We
+        // surface an info line for context; it never fails the run.
         const linkedResult = await api(
           `mspp_entitypermissions(${permission.mspp_entitypermissionid})/mspp_entitypermission_webrole?$select=mspp_webroleid`,
           { allow404: true }
         ).catch(() => ({ value: [] }));
-        const linked = (linkedResult?.value || []).some((r) => r.mspp_webroleid === authRole.mspp_webroleid);
-        check(
-          'portal',
-          `table permission '${name}' linked to Authenticated Users${tag}`,
-          linked,
-          linked ? '' : 'runtime link mspp_entitypermission_webrole is empty — add the role in the Power Pages Security UI'
+        const apiRows = (linkedResult?.value || []).length;
+        console.error(
+          `  NOTE  '${name}' web-role link is not SPN-readable (API sees ${apiRows} row(s)); ` +
+            `confirm via portal login — see RUNBOOK ④c`
         );
       }
     }
