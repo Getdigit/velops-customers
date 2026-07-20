@@ -2002,12 +2002,17 @@ body:has(.nav-account) .nav-account .nav-link {
   padding: 8px 14px;
 }
 body:has(.nav-account) .nav-account .nav-link:hover { color: #111111; }
+body:has(.nav-account) .nav-account .nav-link,
+body:has(.nav-account) .nav-account .nav-link.active {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
 body:has(.nav-account) .nav-account .nav-link.active {
   color: #111111;
   font-weight: 700;
-  background: transparent;
-  border: none;
-  border-bottom: 3px solid #F5D920;
+  box-shadow: inset 0 -3px 0 #F5D920 !important;
 }
 body:has(.nav-account) .nav-account .fa { display: none; }
 
@@ -2023,8 +2028,9 @@ body:has(.nav-account) #mainContent {
 /* Belt-and-braces: the external-account column is switched off via the
    Authentication/Registration/ExternalLoginEnabled site setting; hide it in
    CSS too in case a cache still renders it. */
-body:has(.nav-account) .page-content .col-md-6:has(form[action="/Account/Login/ExternalLogin"]),
-body:has(.nav-account) #external-login-heading { display: none !important; }
+body:has(.nav-account) .page-content [class*="col-"]:has(form[action*="ExternalLogin"]),
+body:has(.nav-account) form[action*="ExternalLogin"],
+body:has(.nav-account) .login-heading-section[id*="external"] { display: none !important; }
 
 /* Single column instead of the bootstrap two-column grid */
 body:has(.nav-account) .page-content .row { display: block; margin: 0; }
@@ -2057,6 +2063,7 @@ body:has(.nav-account) .portal-form [class*="col-md-"] { width: 100%; padding: 0
 body:has(.nav-account) .portal-form [class*="offset-md-"] { margin-left: 0; }
 body:has(.nav-account) .portal-form label.col-form-label {
   display: block;
+  text-align: left;
   padding: 0 0 6px;
   font-family: 'Saira Condensed', sans-serif;
   font-size: 12px;
