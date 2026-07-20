@@ -115,6 +115,14 @@ Nu kunnen **deploy-solution** en **deploy-portal** draaien (Actions → workflow
 - [ ] Noteer de site-URL (`https://<naam>.powerappsportals.com`) — nodig voor CORS in stap ⑤.
 - [ ] Draai daarna de workflow **configure-portal** (table permissions + site settings; die
       faalt bewust zolang de site niet actief is).
+- [ ] **VERPLICHT na configure-portal: herstart de site.** De tabelrechten worden via de
+      API aangemaakt (niet via de Power Pages-beheerapp), en de runtime draait tot een
+      herstart met zijn oude, lege permissie-cache — een ingelogde bezoeker krijgt dan
+      "You don't have permission to read the contact table" en blijft op het pending-scherm
+      hangen (ook al is zijn contact correct aan een team gekoppeld). Fix:
+      <https://make.powerpages.microsoft.com> → site **VelOps Support** → **⋯ / More →
+      Restart**. NB: dit wordt NIET door de SPN-/anonieme smoke-tests gedekt (de SPN omzeilt
+      portal-permissies) — het is een eenmalige handmatige stap.
 
 **Workflow-volgorde totaal:** `deploy-solution` → `deploy-portal` → activeren (deze stap) →
 `configure-portal`. `deploy-portal` hoeft hierna **nooit** meer (geleerde les 2) — nieuwe
