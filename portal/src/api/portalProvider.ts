@@ -26,14 +26,12 @@ import type {
   Ticket,
 } from "../types";
 import { DIRECTION, SOURCE } from "../types";
-import { portalWriteEndpoint } from "../ai/config";
+import { portalUploadEndpoint, portalWriteEndpoint } from "../ai/config";
 import type { DataProvider } from "./provider";
 import { readPortalUser } from "./user";
 
 const API = "/_api";
 const ANNOTATIONS = 'odata.include-annotations="*"';
-const SINGLE_UPLOAD_LIMIT = 16 * 1024 * 1024; // 16 MB
-const CHUNK_SIZE = 4 * 1024 * 1024; // 4 MB blocks
 
 type ODataRecord = Record<string, unknown>;
 
@@ -111,26 +109,10 @@ export class PortalProvider implements DataProvider {
     return data.value ?? [];
   }
 
-  /** POST a record; returns the new record's id (from OData-EntityId). */
-  private async post(entitySet: string, body: ODataRecord): Promise<string> {
-    const token = await this.getToken();
-    const res = await fetch(`${API}/${entitySet}`, {
-      method: "POST",
-      credentials: "same-origin",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        __RequestVerificationToken: token,
-      },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) throw new Error(`POST ${entitySet} failed: ${res.status} ${await res.text()}`);
-    const entityId = res.headers.get("OData-EntityId") ?? res.headers.get("odata-entityid") ?? "";
-    const m = entityId.match(/\(([0-9a-fA-F-]{36})\)/);
-    if (!m) throw new Error(`POST ${entitySet}: no OData-EntityId returned.`);
-    return m[1]!.toLowerCase();
-  }
-
+  // NOTE: record CREATION (ticket/message/attachment) no longer goes through the
+  // portal Web API — it binds lookups, which this site refuses for portal users
+  // (see portalWrite/uploadAttachment). Only scalar PATCH (status/rating/profile)
+  // still runs here, since updates need no association privilege.
   private async patch(entitySet: string, id: string, body: ODataRecord): Promise<void> {
     const token = await this.getToken();
     const res = await fetch(`${API}/${entitySet}(${id})`, {
@@ -386,87 +368,32 @@ export class PortalProvider implements DataProvider {
     return `${API}/gd_ticketattachments(${a.id})/gd_file/$value`;
   }
 
+  /**
+   * Server-side attachment upload (see portalWrite): the gd_ticketattachment
+   * create binds gd_Ticket/gd_Message, which the portal Web API refuses, so the
+   * record AND the file column are written by the /api/portalupload Function with
+   * the admin SPN. The raw file is the request body; metadata rides in the query.
+   */
   async uploadAttachment(ticketId: string, file: File, messageId?: string): Promise<Attachment> {
-    const record: ODataRecord = {
-      gd_name: file.name,
-      gd_mimetype: file.type || "application/octet-stream",
-      gd_isimage: file.type.startsWith("image/"),
-      "gd_Ticket@odata.bind": `/gd_supporttickets(${ticketId})`,
-    };
-    if (messageId) record["gd_Message@odata.bind"] = `/gd_supportmessages(${messageId})`;
-    const id = await this.post("gd_ticketattachments", record);
-    await this.uploadFile(id, file);
-    return {
-      id,
+    const me = await this.myProfile();
+    const endpoint = portalUploadEndpoint();
+    if (!endpoint) throw new Error("The upload service isn't configured yet — the VelOps team is finishing setup.");
+    const params = new URLSearchParams({
+      contactId: me.contactId,
       ticketId,
-      messageId: messageId ?? null,
       fileName: file.name,
       mimeType: file.type || "application/octet-stream",
-      isImage: file.type.startsWith("image/"),
-      createdOn: new Date().toISOString(),
-    };
-  }
-
-  /**
-   * Upload the binary into the gd_file column.
-   * <=16MB: single PUT (application/octet-stream + x-ms-file-name).
-   * >16MB: initial request with x-ms-transfer-mode: chunked, then 4MB
-   * blocks with Content-Range: bytes <start>-<end>/<total> until 204.
-   */
-  private async uploadFile(attachmentId: string, file: File): Promise<void> {
-    const base = `${API}/gd_ticketattachments(${attachmentId})/gd_file`;
-    const fileName = encodeURIComponent(file.name);
-
-    if (file.size <= SINGLE_UPLOAD_LIMIT) {
-      const token = await this.getToken();
-      const res = await fetch(`${base}?x-ms-file-name=${fileName}`, {
-        method: "PUT",
-        credentials: "same-origin",
-        headers: {
-          "Content-Type": "application/octet-stream",
-          "x-ms-file-name": file.name,
-          __RequestVerificationToken: token,
-        },
-        body: file,
-      });
-      if (!res.ok) throw new Error(`File upload failed: ${res.status} ${await res.text()}`);
-      return;
-    }
-
-    // Chunked upload — initial handshake.
-    const initToken = await this.getToken();
-    const initRes = await fetch(`${base}?x-ms-file-name=${fileName}`, {
-      method: "PUT",
-      credentials: "same-origin",
-      headers: {
-        "x-ms-transfer-mode": "chunked",
-        "x-ms-file-name": file.name,
-        __RequestVerificationToken: initToken,
-      },
     });
-    if (!initRes.ok) throw new Error(`Chunked upload init failed: ${initRes.status} ${await initRes.text()}`);
-    // The service replies with the upload session URL in Location
-    // (falls back to the column URL itself when absent).
-    const location = initRes.headers.get("Location") ?? `${base}?x-ms-file-name=${fileName}`;
-    const sessionUrl = location.startsWith("http") || location.startsWith("/") ? location : `${base}?${location}`;
-
-    for (let offset = 0; offset < file.size; offset += CHUNK_SIZE) {
-      const chunk = file.slice(offset, Math.min(offset + CHUNK_SIZE, file.size));
-      const end = Math.min(offset + CHUNK_SIZE, file.size) - 1;
-      const token = await this.getToken();
-      const res = await fetch(sessionUrl, {
-        method: "PUT",
-        credentials: "same-origin",
-        headers: {
-          "Content-Type": "application/octet-stream",
-          "x-ms-file-name": file.name,
-          "Content-Range": `bytes ${offset}-${end}/${file.size}`,
-          __RequestVerificationToken: token,
-        },
-        body: chunk,
-      });
-      // 206 PartialContent per chunk, 204 NoContent on the final chunk.
-      if (!res.ok) throw new Error(`Chunk upload failed at byte ${offset}: ${res.status} ${await res.text()}`);
-    }
+    if (messageId) params.set("messageId", messageId);
+    const sep = endpoint.includes("?") ? "&" : "?";
+    const res = await fetch(`${endpoint}${sep}${params.toString()}`, {
+      method: "POST",
+      headers: { "content-type": "application/octet-stream" },
+      body: file,
+    });
+    const json = (await res.json().catch(() => ({}))) as { value?: ODataRecord; error?: { message?: string } };
+    if (!res.ok) throw new Error(json?.error?.message || `Upload failed (HTTP ${res.status}).`);
+    if (!json.value) throw new Error("The upload service returned an empty result.");
+    return this.mapAttachment(json.value);
   }
 }

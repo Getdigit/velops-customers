@@ -21,7 +21,8 @@
 //   createMessage { contactId, ticketId, body }
 
 const { app } = require('@azure/functions');
-const { api, odataQuote, isGuid, cleanGuid } = require('../lib/dataverse');
+const { api, isGuid, cleanGuid } = require('../lib/dataverse');
+const { HttpError, badRequest, corsHeaders, resolveContact, assertTicketInTeam } = require('../lib/portal');
 
 const TICKET_SELECT =
   'gd_supportticketid,gd_ticketnumber,gd_name,gd_description,gd_tickettype,gd_priority,' +
@@ -33,41 +34,6 @@ const MESSAGE_SELECT =
 const DIRECTION_CUSTOMER = 122690000; // gd_messagedirection: Customer
 const SOURCE_PORTAL_FORM = 122690000; // gd_ticketsource: Portal form
 const ANNOTATE = { Prefer: 'odata.include-annotations="OData.Community.Display.V1.FormattedValue"' };
-
-function corsHeaders(origin) {
-  const configured = (process.env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
-  const headers = {
-    'Access-Control-Allow-Headers': 'content-type, authorization',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    Vary: 'Origin',
-  };
-  if (configured.length && origin && configured.includes(origin)) {
-    headers['Access-Control-Allow-Origin'] = origin;
-    headers['Access-Control-Allow-Credentials'] = 'true';
-  } else {
-    headers['Access-Control-Allow-Origin'] = origin || '*';
-  }
-  return headers;
-}
-
-class HttpError extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-  }
-}
-const badRequest = (m) => new HttpError(400, m);
-
-/** Resolve + validate the caller's contact; returns { id, fullName, accountId }. */
-async function resolveContact(contactId) {
-  if (!isGuid(contactId)) throw badRequest('Invalid or missing contactId.');
-  const id = cleanGuid(contactId);
-  const c = await api(`contacts(${id})?$select=contactid,fullname,_parentcustomerid_value`, { allow404: true });
-  if (!c) throw badRequest('Contact not found.');
-  const accountId = c._parentcustomerid_value || null;
-  if (!accountId) throw badRequest('Your account is not linked to a team yet.');
-  return { id, fullName: c.fullname || '', accountId };
-}
 
 async function createTicket(input) {
   const me = await resolveContact(input.contactId);
@@ -112,11 +78,7 @@ async function createMessage(input) {
   if (!body) throw badRequest('An empty message cannot be posted.');
 
   // Team-scope guard: the ticket must belong to the caller's own account.
-  const ticket = await api(`gd_supporttickets(${ticketId})?$select=gd_supportticketid,_gd_account_value`, { allow404: true });
-  if (!ticket) throw badRequest('Ticket not found.');
-  if ((ticket._gd_account_value || '').toLowerCase() !== me.accountId.toLowerCase()) {
-    throw new HttpError(403, 'You cannot post to a ticket outside your team.');
-  }
+  await assertTicketInTeam(ticketId, me.accountId);
 
   const title = body.length > 80 ? `${body.slice(0, 77)}...` : body;
   const created = await api('gd_supportmessages', {

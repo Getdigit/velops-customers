@@ -111,19 +111,21 @@ jobs:
           # every re-deploy we PIN both functions to the known secret value; only
           # the very first deploy (no secret yet) lets Azure generate one.
           if [ -n "$AI_PROXY_FUNCTION_KEY" ]; then
-            az functionapp function keys set -g velops-customer-ai-rg -n velops-customer-ai \
-              --function-name messages --key-name portal --key-value "$AI_PROXY_FUNCTION_KEY" --output none
-            az functionapp function keys set -g velops-customer-ai-rg -n velops-customer-ai \
-              --function-name portalwrite --key-name portal --key-value "$AI_PROXY_FUNCTION_KEY" --output none
-            echo "Pinned 'portal' key on messages + portalwrite to the AI_PROXY_FUNCTION_KEY secret."
+            for fn in messages portalwrite portalupload; do
+              az functionapp function keys set -g velops-customer-ai-rg -n velops-customer-ai \
+                --function-name "$fn" --key-name portal --key-value "$AI_PROXY_FUNCTION_KEY" --output none
+            done
+            echo "Pinned 'portal' key on messages + portalwrite + portalupload to the AI_PROXY_FUNCTION_KEY secret."
           else
             az functionapp function keys set -g velops-customer-ai-rg -n velops-customer-ai \
               --function-name messages --key-name portal --output none
             KEY=$(az functionapp function keys list -g velops-customer-ai-rg -n velops-customer-ai \
               --function-name messages --query portal -o tsv)
-            az functionapp function keys set -g velops-customer-ai-rg -n velops-customer-ai \
-              --function-name portalwrite --key-name portal --key-value "$KEY" --output none
-            echo "Generated 'portal' key on messages + copied to portalwrite (first deploy)."
+            for fn in portalwrite portalupload; do
+              az functionapp function keys set -g velops-customer-ai-rg -n velops-customer-ai \
+                --function-name "$fn" --key-name portal --key-value "$KEY" --output none
+            done
+            echo "Generated 'portal' key on messages + copied to portalwrite + portalupload (first deploy)."
             echo ""
             echo "NEXT (RUNBOOK stap ⑤):"
             echo "  1. Azure Portal -> velops-customer-ai -> Functions -> messages -> Function keys:"

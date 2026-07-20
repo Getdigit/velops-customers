@@ -76,6 +76,32 @@ async function api(path, init = {}) {
   throw err;
 }
 
+/**
+ * Upload bytes into a Dataverse file column via a single PUT (octet-stream +
+ * x-ms-file-name). `pathToColumn` is e.g. `gd_ticketattachments(<id>)/gd_file`.
+ * Single-shot is fine for support photos (the column max is 32 MB; browsers
+ * rarely send more). Throws Error(.status) on failure.
+ */
+async function uploadFileColumn(pathToColumn, fileName, bytes) {
+  const token = await getToken();
+  const url = `${baseUrl()}/api/data/${API_VERSION}/${String(pathToColumn).replace(/^\/+/, '')}?x-ms-file-name=${encodeURIComponent(fileName)}`;
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/octet-stream',
+      'x-ms-file-name': fileName,
+    },
+    body: bytes,
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => '');
+    const err = new Error(`file upload ${pathToColumn} -> HTTP ${res.status}: ${t.slice(0, 500)}`);
+    err.status = res.status;
+    throw err;
+  }
+}
+
 /** Quote + escape a string literal for an OData $filter (URL-encoded). */
 function odataQuote(value) {
   return encodeURIComponent(`'${String(value).replace(/'/g, "''")}'`);
@@ -90,4 +116,4 @@ function cleanGuid(v) {
   return String(v).trim().replace(/[{}]/g, '').toLowerCase();
 }
 
-module.exports = { api, baseUrl, getToken, odataQuote, isGuid, cleanGuid };
+module.exports = { api, baseUrl, getToken, odataQuote, isGuid, cleanGuid, uploadFileColumn };

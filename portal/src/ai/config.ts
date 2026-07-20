@@ -38,8 +38,17 @@ export function proxyEndpoint(): string {
  * Returns "" when the proxy isn't configured yet.
  */
 export function portalWriteEndpoint(): string {
+  return portalFnEndpoint("portalwrite");
+}
+
+/** Attachment upload endpoint (…/api/portalupload) — file body, metadata in query. */
+export function portalUploadEndpoint(): string {
+  return portalFnEndpoint("portalupload");
+}
+
+function portalFnEndpoint(fn: string): string {
   if (!AI_PROXY_URL) return "";
-  const url = AI_PROXY_URL.replace(/\/api\/messages\/?(\?.*)?$/, "/api/portalwrite$1");
+  const url = AI_PROXY_URL.replace(/\/api\/messages\/?(\?.*)?$/, `/api/${fn}$1`);
   if (!AI_PROXY_KEY) return url;
   const sep = url.includes("?") ? "&" : "?";
   return `${url}${sep}code=${encodeURIComponent(AI_PROXY_KEY)}`;

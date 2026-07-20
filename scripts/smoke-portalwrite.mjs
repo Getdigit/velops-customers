@@ -12,12 +12,15 @@ import { api, fail, whoami, odataQuote } from "./lib/dataverse.mjs";
 
 const CONTACT_ID = process.env.SMOKE_CONTACT_ID || "d7382d3a-3584-f111-8076-000d3adce9a0";
 
-function writeEndpoint() {
+function fnEndpoint(fn) {
   const base = process.env.VITE_AI_PROXY_URL || "";
   const key = process.env.VITE_AI_PROXY_KEY || "";
-  if (!base) fail("VITE_AI_PROXY_URL is not set — cannot locate the portalwrite endpoint.");
-  const url = base.replace(/\/api\/messages\/?(\?.*)?$/, "/api/portalwrite$1");
+  if (!base) fail("VITE_AI_PROXY_URL is not set — cannot locate the function endpoints.");
+  const url = base.replace(/\/api\/messages\/?(\?.*)?$/, `/api/${fn}$1`);
   return key ? `${url}${url.includes("?") ? "&" : "?"}code=${encodeURIComponent(key)}` : url;
+}
+function writeEndpoint() {
+  return fnEndpoint("portalwrite");
 }
 
 async function callWrite(action, payload) {
@@ -44,6 +47,7 @@ async function main() {
   const failures = [];
   let ticketId = null;
   let messageId = null;
+  let attachmentId = null;
 
   // 1. createTicket
   const t = await callWrite("createTicket", {
@@ -84,7 +88,29 @@ async function main() {
     else console.error(`  guard (bad contact) correctly rejected -> HTTP ${guard.status}`);
   }
 
-  // 4. cleanup with the SPN.
+  // 4. attachment upload (portalupload): a tiny 1x1 PNG.
+  if (ticketId) {
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+      "base64",
+    );
+    const params = new URLSearchParams({ contactId: CONTACT_ID, ticketId, fileName: "smoke.png", mimeType: "image/png" });
+    const upUrl = `${fnEndpoint("portalupload")}${fnEndpoint("portalupload").includes("?") ? "&" : "?"}${params}`;
+    const up = await fetch(upUrl, { method: "POST", headers: { "content-type": "application/octet-stream" }, body: png });
+    const upText = await up.text();
+    let upJson; try { upJson = JSON.parse(upText); } catch { upJson = { raw: upText }; }
+    console.error(`uploadAttachment -> HTTP ${up.status}`);
+    if (up.status !== 200 || !upJson.value) {
+      failures.push(`uploadAttachment failed: ${JSON.stringify(upJson).slice(0, 400)}`);
+    } else {
+      attachmentId = upJson.value.gd_ticketattachmentid;
+      console.error(`  attachment ${attachmentId} isImage=${upJson.value.gd_isimage}`);
+      if (upJson.value.gd_isimage !== true) failures.push("attachment gd_isimage not true for image/png");
+    }
+  }
+
+  // 5. cleanup with the SPN (attachment + message before the ticket).
+  if (attachmentId) await api(`gd_ticketattachments(${attachmentId})`, { method: "DELETE" }).catch((e) => console.error(`(attach cleanup warn: ${e.message})`));
   if (messageId) await api(`gd_supportmessages(${messageId})`, { method: "DELETE" }).catch((e) => console.error(`(msg cleanup warn: ${e.message})`));
   if (ticketId) await api(`gd_supporttickets(${ticketId})`, { method: "DELETE" }).catch((e) => console.error(`(ticket cleanup warn: ${e.message})`));
   console.error("cleaned up smoke records");
